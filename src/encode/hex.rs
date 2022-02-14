@@ -1,29 +1,19 @@
 const CHARSET_UPPERCASE: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
 const CHARSET_LOWERCASE: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
 
-/// Decodes a hex string into its bytes
-/// Note: Will filter out any non-hex characters
-/// * 'hex'                                 - The hex string to decode
-/// * 'header', 'seperator', 'terminator'   - will be stripped from the string
-pub fn hex_decode(hex: &str, header: &str, seperator: &str, terminator: &str) -> Vec<u8> {
+/// Upper or Lowercase characters
+pub enum Case {
+    Upper,
+    Lower
+}
 
-    let mut decoded = Vec::new();
-    // remove header, seperator and terminator
-    let mut s = hex.replace(header, "");
-    s = s.replace(seperator, "");
-    s = s.replace(terminator, "");
-
-    // filter out any non-hex chars
-    let mut it = s.chars().filter_map(|c| is_hex(c));
-
-    while let Some(v1) = it.next() {
-        match it.next() {
-            Some(v2) => decoded.push((v1 << 4) | v2),
-            _ => decoded.push(v1 << 4)
+impl Case {
+    fn value(&self) -> &'static [char;16] {
+        match self {
+            Self::Upper => &CHARSET_UPPERCASE,
+            Self::Lower => &CHARSET_LOWERCASE
         }
     }
-
-    decoded
 }
 
 fn is_hex(character: char) -> Option<u8> {
@@ -34,15 +24,16 @@ fn is_hex(character: char) -> Option<u8> {
         _ => None,
     }
 }
+
 /// Encodes a byte buffer to a Hex string
 /// * 'bytes'       - The buffer to encode
-/// * 'uppercase'   - Whether to encode in uppercase or lowercase letters
+/// * 'case'   - Whether to encode in uppercase or lowercase letters
 /// * 'header'      - will be prepended to the string
 /// * 'seperator'   - will be inserted after each grouping
 /// * 'terminator'  - will be appended to the resulting string
 /// * 'groupsize'   - Controls the grouping. E.g groupsize 2 and seperator ":" with a buffer of \[1,0,1] will result in "0100:01"
-pub fn hex_encode(bytes: &[u8], uppercase: bool, header: &str, seperator: &str, terminator: &str, groupsize: usize) -> String {
-    let charset = if uppercase { &CHARSET_UPPERCASE } else { &CHARSET_LOWERCASE };
+pub fn hex_encode(bytes: &[u8], case: Case, header: &str, seperator: &str, terminator: &str, groupsize: usize) -> String {
+    let charset = case.value();
 
     let mut encoded = String::from(header);
 
@@ -68,6 +59,32 @@ pub fn hex_encode(bytes: &[u8], uppercase: bool, header: &str, seperator: &str, 
     encoded
 }
 
+/// Decodes a hex string into its bytes
+/// 
+/// Note: Will filter out any non-hex characters
+/// * 'hex'                                 - The hex string to decode
+/// * 'header', 'seperator', 'terminator'   - will be stripped from the string
+pub fn hex_decode(hex: &str, header: &str, seperator: &str, terminator: &str) -> Vec<u8> {
+
+    let mut decoded = Vec::new();
+    // remove header, seperator and terminator
+    let mut s = hex.replace(header, "");
+    s = s.replace(seperator, "");
+    s = s.replace(terminator, "");
+
+    // filter out any non-hex chars
+    let mut it = s.chars().filter_map(|c| is_hex(c));
+
+    while let Some(v1) = it.next() {
+        match it.next() {
+            Some(v2) => decoded.push((v1 << 4) | v2),
+            _ => decoded.push(v1 << 4)
+        }
+    }
+
+    decoded
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -87,7 +104,7 @@ mod tests {
     #[test]
     fn encode_groupsize_1() {
         let v = vec![1u8, 2, 3, 4];
-        let encoded = hex_encode(&v, true, "", ":", "", 1);
+        let encoded = hex_encode(&v, Case::Upper, "", ":", "", 1);
         let exp = "01:02:03:04";
         assert_eq!(encoded, exp)
     }
@@ -96,7 +113,7 @@ mod tests {
     #[test]
     fn encode_groupsize_2() {
         let v = vec![1u8, 2, 3, 4];
-        let encoded = hex_encode(&v, true, "", ":", "", 2);
+        let encoded = hex_encode(&v, Case::Upper, "", ":", "", 2);
         let exp = "0102:0304";
         assert_eq!(encoded, exp)
     }
@@ -105,7 +122,7 @@ mod tests {
     #[test]
     fn encode_groupsize_3() {
         let v = vec![1u8, 2, 3, 4];
-        let encoded = hex_encode(&v, true, "", ":", "", 3);
+        let encoded = hex_encode(&v, Case::Upper, "", ":", "", 3);
         let exp = "010203:04";
         assert_eq!(encoded, exp)
     }
@@ -114,7 +131,7 @@ mod tests {
     #[test]
     fn encode_groupsize_4() {
         let v = vec![1u8, 2, 3, 4];
-        let encoded = hex_encode(&v, true, "", ":", "", 4);
+        let encoded = hex_encode(&v, Case::Upper, "", ":", "", 4);
         let exp = "01020304";
         assert_eq!(encoded, exp)
     }
