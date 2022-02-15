@@ -144,16 +144,18 @@ fn decode_core(filtered: Vec<u8>) -> Result<Vec<u8>, Error> {
 
     let rem = chunks.remainder().to_owned();
 
-    if rem.len() == 2 {
+    match rem.len() {
+        0 => {},
 
-        decoded.push( ( rem[0] << 2 ) | ( rem[1] >> 4 ) )
+        2 => decoded.push( ( rem[0] << 2 ) | ( rem[1] >> 4 ) ),
 
-    } else if rem.len() == 3 {
+        3 => {
+            decoded.push( ( rem[0] << 2 ) | ( rem[1] >> 4) );
+            decoded.push( (rem[1] << 4) | (rem[2] >> 2) );
+        },
 
-        decoded.push( ( rem[0] << 2 ) | ( rem[1] >> 4) );
-        decoded.push( (rem[1] << 4) | (rem[2] >> 2) );
-
-    } else if rem.len() > 3 || ( rem.len() < 2 && !rem.is_empty() ) { return Err(Error::InvalidFormat(rem.len())); }
+        _ => return Err(Error::InvalidFormat(rem.len()))
+    }
 
     Ok(decoded)
 }
