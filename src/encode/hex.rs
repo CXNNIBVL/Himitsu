@@ -8,10 +8,10 @@ enum Case {
 }
 
 impl Case {
-    fn value(&self) -> &'static [char;16] {
+    fn value_at(&self, ix: usize) -> char {
         match self {
-            Self::Upper => &CHARSET_UPPERCASE,
-            Self::Lower => &CHARSET_LOWERCASE
+            Self::Upper => CHARSET_UPPERCASE[ix],
+            Self::Lower => CHARSET_LOWERCASE[ix]
         }
     }
 }
@@ -85,8 +85,6 @@ impl HexEncoder {
     /// * 'data'    - The data to encode
     pub fn encode(&self, data: &[u8]) -> String {
 
-        let charset = self.case.value();
-
         let mut encoded = String::from("");
 
         for (i, v) in data.iter().enumerate() {
@@ -101,8 +99,8 @@ impl HexEncoder {
             let iy = (v & 0x0F) as usize;
 
             // Insert the actual hex chars
-            encoded.push(charset[ix]);
-            encoded.push(charset[iy]);
+            encoded.push(self.case.value_at(ix));
+            encoded.push(self.case.value_at(iy));
         }
 
         // Format the output
