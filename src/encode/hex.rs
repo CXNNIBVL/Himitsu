@@ -2,6 +2,7 @@ const CHARSET_UPPERCASE: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '
 const CHARSET_LOWERCASE: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
 
 /// Upper or Lowercase characters
+#[derive(Debug, Clone, Copy)]
 enum Case {
     Upper,
     Lower
@@ -25,6 +26,7 @@ fn is_hex(character: char) -> Option<u8> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct HexEncoder {
     header: String,
     seperator: String,
@@ -137,6 +139,12 @@ impl HexEncoder {
 }
 
 impl Default for HexEncoder {
+    /// Create a new encoder with
+    /// * no header
+    /// * : as seperator
+    /// * no terminator
+    /// * 1 as groupsize
+    /// * uppercase letters
     fn default() -> Self {
         Self {
             header: String::from(""),
