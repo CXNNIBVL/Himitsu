@@ -1,31 +1,6 @@
 const CHARSET_UPPERCASE: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
 const CHARSET_LOWERCASE: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
 
-/// Upper or Lowercase characters
-#[derive(Debug, Clone, Copy)]
-enum Case {
-    Upper,
-    Lower
-}
-
-impl Case {
-    fn value_at(&self, ix: usize) -> char {
-        match self {
-            Self::Upper => CHARSET_UPPERCASE[ix],
-            Self::Lower => CHARSET_LOWERCASE[ix]
-        }
-    }
-}
-
-fn is_hex(character: char) -> Option<u8> {
-    match character {
-        '0'..='9' => Some(character as u8 - b'0'),
-        'A'..='F' => Some(character as u8 - b'A' + 10),
-        'a'..='f' => Some(character as u8 - b'a' + 10),
-        _ => None,
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct HexEncoder {
     header: String,
@@ -125,10 +100,10 @@ impl HexEncoder {
         };
 
         // filter out any non-hex chars
-        let mut it = stripped.chars().filter_map(|c| is_hex(c));
+        let mut filtered = stripped.chars().filter_map(|c| is_hex(c));
 
-        while let Some(v1) = it.next() {
-            match it.next() {
+        while let Some(v1) = filtered.next() {
+            match filtered.next() {
                 Some(v2) => decoded.push((v1 << 4) | v2),
                 _ => decoded.push(v1 << 4)
             }
@@ -153,6 +128,31 @@ impl Default for HexEncoder {
             groupsize: 1usize,
             case: Case::Upper
         }
+    }
+}
+
+/// Upper or Lowercase characters
+#[derive(Debug, Clone)]
+enum Case {
+    Upper,
+    Lower
+}
+
+impl Case {
+    fn value_at(&self, ix: usize) -> char {
+        match self {
+            Self::Upper => CHARSET_UPPERCASE[ix],
+            Self::Lower => CHARSET_LOWERCASE[ix]
+        }
+    }
+}
+
+fn is_hex(character: char) -> Option<u8> {
+    match character {
+        '0'..='9' => Some(character as u8 - b'0'),
+        'A'..='F' => Some(character as u8 - b'A' + 10),
+        'a'..='f' => Some(character as u8 - b'a' + 10),
+        _ => None,
     }
 }
 

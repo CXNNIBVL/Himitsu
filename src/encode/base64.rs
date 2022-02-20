@@ -1,13 +1,4 @@
-use thiserror::Error as ThisErr;
-
-#[derive(ThisErr, Debug)]
-pub enum Error {
-    #[error("input length must be a multiple of 4 (found {0})")]
-    InvalidInputLength(usize),
-
-    #[error("invalid length after stripping non-base64 characters, remainder must be either 0, 2 or 3 (found {0})")]
-    InvalidFormat(usize)
-}
+use crate::errors::base64::Base64Error;
 
 const B64_CHARS: [char; 64] = [
 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -29,7 +20,109 @@ const B64_URL_CHARS: [char; 64] = [
 
 const PADDING: char = '=';
 
-pub enum Kind {
+#[derive(Debug, Clone, Copy)]
+pub struct Base64Encoder {
+    kind: Kind
+}
+
+impl Base64Encoder {
+
+    /// Create a new encoder with basic encoding
+    pub fn new() -> Self {
+        Self { kind: Kind::Basic }
+    } 
+
+    /// Create a new encoder with url safe encoding
+    pub fn new_url() -> Self {
+        Self { kind: Kind::UrlSafe }
+    }
+
+    /// Encodes bytes to a String in Base64 format
+    /// * 'bytes' - The byte buffer to encode
+    pub fn encode(&self, bytes: &[u8]) -> String {
+
+        let mut encoded = String::new();
+
+        if bytes.is_empty() {
+            return encoded;
+        }
+
+        // Bytes are split into chunks of 6 bit each -> Must add up to multiple of 24 bit 
+        let mut chunks = bytes.chunks_exact(3);
+
+        while let Some(ch) = chunks.next() {
+            // Main encoding step      
+            let ia = ch[0] >> 2;
+            let ib = ( ( ch[0] & 0b11 ) << 4) | ( ( ch[1] & 0b11110000 ) >> 4 );
+            let ic = ( ( ch[1] & 0b1111 ) << 2) | ( ( ch[2] & 0b11000000 ) >> 6 );
+            let id = ch[2] & 0b111111;
+
+            encoded.extend([
+                self.kind.value_at(ia as usize),
+                self.kind.value_at(ib as usize), 
+                self.kind.value_at(ic as usize),
+                self.kind.value_at(id as usize)
+            ]);
+        }
+
+        let rem = chunks.remainder().to_owned();
+
+        // Each PADDING character amounts to two zero bits that have been appended to the remaining bits
+        if rem.len() == 1 {
+
+            let ia = rem[0] >> 2;
+            let ib = (rem[0] & 0b11 ) << 4;
+
+            encoded.extend([
+                self.kind.value_at(ia as usize),
+                self.kind.value_at(ib as usize),
+                PADDING,
+                PADDING
+            ]);
+
+        } else if rem.len() == 2 {
+
+            let ia = rem[0] >> 2;
+            let ib = ( ( rem[0] & 0b11 ) << 4) | ( ( rem[1] & 0b11110000 ) >> 4 );
+            let ic = ( rem[1] & 0b1111 ) << 2;
+
+            encoded.extend([
+                self.kind.value_at(ia as usize),
+                self.kind.value_at(ib as usize),
+                self.kind.value_at(ic as usize),
+                PADDING
+            ]);
+        }
+
+        encoded
+    }
+
+    /// Decodes a String in Base64 format to bytes
+    /// 
+    /// Note: Will filter out any non-base64 characters
+    /// * 'string' - The string to decode
+    pub fn decode(&self, string: &str) -> Result<Vec<u8>, Base64Error> {
+
+        if string.len() % 4 != 0 { return Err(Base64Error::InvalidInputLength(string.len())); }
+
+        // filter out any non-b64 chars
+        let filtered: Vec<u8>  = string.chars()
+                                    .filter_map(|c| self.kind.is_b64(c))
+                                    .collect();
+
+        decode_core(filtered)
+    }
+}
+
+impl Default for Base64Encoder {
+    /// Create new encoder with basic encoding
+    fn default() -> Self {
+        Self { kind: Kind::Basic }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Kind {
     Basic,
     UrlSafe
 }
@@ -45,7 +138,8 @@ impl Kind {
     }
 
     // Returns the indices into the encoding array
-    fn is_b64(&self, c: char) -> Option<u8> { 
+    fn is_b64(&self, c: char) -> Option<u8> {
+         
         match self {
             Kind::Basic => match c {
                 'A'..='Z' => Some(c as u8 - b'A'),
@@ -66,71 +160,10 @@ impl Kind {
             }
         }
     }
-
-}
-
-/// Encodes bytes to a String in Base64 format
-/// * 'bytes' - The byte buffer to encode
-pub fn base64_encode(kind: Kind, bytes: &[u8]) -> String {
-
-    let mut encoded = String::new();
-
-    if bytes.is_empty() {
-        return encoded;
-    }
-
-    // Bytes are split into chunks of 6 bit each -> Must add up to multiple of 24 bit 
-    let mut chunks = bytes.chunks_exact(3);
-
-    while let Some(ch) = chunks.next() {
-        // Main encoding step      
-        let ia = ch[0] >> 2;
-        let ib = ( ( ch[0] & 0b11 ) << 4) | ( ( ch[1] & 0b11110000 ) >> 4 );
-        let ic = ( ( ch[1] & 0b1111 ) << 2) | ( ( ch[2] & 0b11000000 ) >> 6 );
-        let id = ch[2] & 0b111111;
-
-        encoded.extend([
-            kind.value_at(ia as usize),
-            kind.value_at(ib as usize), 
-            kind.value_at(ic as usize),
-            kind.value_at(id as usize)
-        ]);
-    }
-
-    let rem = chunks.remainder().to_owned();
-
-    // Each PADDING character amounts to two zero bits that have been appended to the remaining bits
-    if rem.len() == 1 {
-
-        let ia = rem[0] >> 2;
-        let ib = (rem[0] & 0b11 ) << 4;
-
-        encoded.extend([
-            kind.value_at(ia as usize),
-            kind.value_at(ib as usize),
-            PADDING,
-            PADDING
-        ]);
-
-    } else if rem.len() == 2 {
-
-        let ia = rem[0] >> 2;
-        let ib = ( ( rem[0] & 0b11 ) << 4) | ( ( rem[1] & 0b11110000 ) >> 4 );
-        let ic = ( rem[1] & 0b1111 ) << 2;
-
-        encoded.extend([
-            kind.value_at(ia as usize),
-            kind.value_at(ib as usize),
-            kind.value_at(ic as usize),
-            PADDING
-        ]);
-    }
-
-    encoded
 }
 
 // Core decoding function, returns decoded bytes
-fn decode_core(filtered: Vec<u8>) -> Result<Vec<u8>, Error> {
+fn decode_core(filtered: Vec<u8>) -> Result<Vec<u8>, Base64Error> {
 
     let mut decoded = Vec::new();
 
@@ -154,29 +187,11 @@ fn decode_core(filtered: Vec<u8>) -> Result<Vec<u8>, Error> {
             decoded.push( (rem[1] << 4) | (rem[2] >> 2) );
         },
 
-        _ => return Err(Error::InvalidFormat(rem.len()))
+        _ => return Err(Base64Error::InvalidFormat(rem.len()))
     }
 
     Ok(decoded)
 }
-
-/// Decodes a String in Base64 format to bytes
-/// 
-/// Note: Will filter out any non-base64 characters
-/// * 'string' - The string to decode
-pub fn base64_decode(kind: Kind, string: &str) -> Result<Vec<u8>, Error> {
-
-    if string.len() % 4 != 0 { return Err(Error::InvalidInputLength(string.len())); }
-
-    // filter out any non-b64 chars
-    let filtered: Vec<u8>  = string.chars()
-                                .filter_map(|c| kind.is_b64(c))
-                                .collect();
-
-    decode_core(filtered)
-}
-
-
 
 #[cfg(test)]
 mod tests {
@@ -187,7 +202,7 @@ mod tests {
     #[test]
     fn encode_basic_zero_pad() {
         let data = "aaa";
-        let r = base64_encode(Kind::Basic, data.as_bytes());
+        let r = Base64Encoder::default().encode(data.as_bytes());
         assert_eq!("YWFh", r);
     }
 
@@ -195,15 +210,15 @@ mod tests {
     #[test]
     fn encode_basic_one_pad() {
         let data = "aa";
-        let r = base64_encode(Kind::Basic, data.as_bytes());
+        let r = Base64Encoder::default().encode(data.as_bytes());
         assert_eq!("YWE=", r);
     }
 
     // Encode some data that results in a Base64 String with 2 padding characters
     #[test]
-    fn encode_two_pad() {
+    fn encode_basic_two_pad() {
         let data = "a";
-        let r = base64_encode(Kind::Basic, data.as_bytes());
+        let r = Base64Encoder::default().encode(data.as_bytes());
         assert_eq!("YQ==", r);
     }
 
@@ -211,9 +226,9 @@ mod tests {
     #[test]
     fn decode_basic_zero_pad() {
         let data = "aaa";
-        let encoded = base64_encode(Kind::Basic, data.as_bytes());
+        let encoded = Base64Encoder::default().encode(data.as_bytes());
         
-        match base64_decode(Kind::Basic, &encoded) {
+        match Base64Encoder::default().decode(&encoded) {
             Ok(v) => assert_eq!(data.as_bytes(), v),
             Err(_) => assert!(false)
         };
@@ -223,9 +238,9 @@ mod tests {
     #[test]
     fn decode_basic_one_pad() {
         let data = "aa";
-        let encoded = base64_encode(Kind::Basic, data.as_bytes());
+        let encoded = Base64Encoder::default().encode(data.as_bytes());
 
-        match base64_decode(Kind::Basic, &encoded) {
+        match Base64Encoder::default().decode(&encoded) {
             Ok(v) => assert_eq!(data.as_bytes(), v),
             Err(_) => assert!(false)
         };
@@ -235,9 +250,9 @@ mod tests {
     #[test]
     fn decode_basic_two_pad() {
         let data = "a";
-        let encoded = base64_encode(Kind::Basic, data.as_bytes());
+        let encoded = Base64Encoder::default().encode(data.as_bytes());
 
-        match base64_decode(Kind::Basic, &encoded) {
+        match Base64Encoder::default().decode(&encoded) {
             Ok(v) => assert_eq!(data.as_bytes(), v),
             Err(_) => assert!(false)
         };
@@ -248,11 +263,11 @@ mod tests {
     fn decode_basic_invalid_length() {
         let data = "a";
         
-        match base64_decode(Kind::Basic, &data) {
+        match Base64Encoder::default().decode(&data) {
             Ok(_) => assert!(false),
             Err(e) => match e {
-                Error::InvalidFormat(_) => assert!(false),
-                Error::InvalidInputLength(s) => assert_eq!(s, 1)
+                Base64Error::InvalidFormat(_) => assert!(false),
+                Base64Error::InvalidInputLength(s) => assert_eq!(s, 1)
             }
         }
     }
@@ -262,11 +277,11 @@ mod tests {
     fn decode_basic_invalid_fmt() {
         let data = "A=AA==AA";
 
-        match base64_decode(Kind::Basic, &data) {
+        match Base64Encoder::default().decode(&data) {
             Ok(_) => assert!(false),
             Err(e) => match e {
-                Error::InvalidInputLength(_) => assert!(false),
-                Error::InvalidFormat(_) => assert!(true)
+                Base64Error::InvalidInputLength(_) => assert!(false),
+                Base64Error::InvalidFormat(_) => assert!(true)
             }
         }
     }
