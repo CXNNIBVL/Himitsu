@@ -1,4 +1,4 @@
-use std::io;
+pub use std::io::{Read as IORead, Result as IOResult, Error as IOError, ErrorKind as IOErrorKind};
 
 pub struct Readable<T> 
     where T: IntoIterator<Item = u8>
@@ -14,9 +14,9 @@ impl<T: IntoIterator<Item = u8>> Readable<T> {
     }
 } 
 
-impl<T: IntoIterator<Item = u8>> io::Read for Readable<T> {
+impl<T: IntoIterator<Item = u8>> IORead for Readable<T> {
 
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+    fn read(&mut self, buf: &mut [u8]) -> IOResult<usize> {
 
         let mut read = 0;
 
@@ -26,7 +26,7 @@ impl<T: IntoIterator<Item = u8>> io::Read for Readable<T> {
                     *b = v;
                     read += 1;
                 },
-                None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof))
+                None => return Err(IOError::from(IOErrorKind::UnexpectedEof))
             }
         }
 

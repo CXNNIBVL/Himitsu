@@ -1,8 +1,3 @@
-
-use std::io;
-use crate::errors::blockcipher::BlockCipherError;
-use crate::traits::blockcipher::Readable;
-use crate::traits::buffer::Buffer;
 pub use crate::traits::blockcipher::{
     BlockCipherEncryption,
     BlockCipherDecryption,
@@ -14,6 +9,12 @@ pub use crate::traits::block_primitive::{
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
     BlockCipherPrimitiveDecryption as PrimitiveDecryption
 };
+
+pub use std::io::{Write as IOWrite, Result as IOResult};
+
+pub use crate::errors::blockcipher::BlockCipherError;
+pub use crate::util::readable::Readable;
+use crate::traits::buffer::Buffer;
 
 pub struct EcbEncryption<T: PrimitiveEncryption> {
     primitive: T,
@@ -55,9 +56,9 @@ impl<T: PrimitiveEncryption> BlockCipherEncryption for EcbEncryption<T> {
     }
 }
 
-impl<T: PrimitiveEncryption> io::Write for EcbEncryption<T> {
+impl<T: PrimitiveEncryption> IOWrite for EcbEncryption<T> {
 
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+    fn write(&mut self, buf: &[u8]) -> IOResult<usize> {
         let mut written = 0;
         for element in buf {
 
@@ -79,7 +80,7 @@ impl<T: PrimitiveEncryption> io::Write for EcbEncryption<T> {
         Ok(written)
     }
 
-    fn flush(&mut self) -> io::Result<()> {
+    fn flush(&mut self) -> IOResult<()> {
         Ok(())
     }
     
@@ -124,9 +125,9 @@ impl<T: PrimitiveDecryption> BlockCipherDecryption for EcbDecryption<T> {
     }
 }
 
-impl<T: PrimitiveDecryption> io::Write for EcbDecryption<T> {
+impl<T: PrimitiveDecryption> IOWrite for EcbDecryption<T> {
 
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+    fn write(&mut self, buf: &[u8]) -> IOResult<usize> {
         let mut written = 0;
         for element in buf {
 
@@ -148,7 +149,7 @@ impl<T: PrimitiveDecryption> io::Write for EcbDecryption<T> {
         Ok(written)
     }
 
-    fn flush(&mut self) -> io::Result<()> {
+    fn flush(&mut self) -> IOResult<()> {
         Ok(())
     }
     

@@ -1,12 +1,24 @@
-use std::mem;
 pub use crate::traits::buffer::Buffer;
-use std::ops::{Index, IndexMut};
+pub use std::ops::{Index, IndexMut};
+pub use std::convert::{AsMut, AsRef};
+
+use std::mem;
 
 pub struct FixedBuffer<T, const BLOCKSIZE: usize> 
     where T: Clone + Copy + Default
 {
     buf: [T; BLOCKSIZE],
     capacity: usize
+}
+
+impl<T: Clone + Copy + Default, const B: usize> FixedBuffer<T, B> {
+    pub fn as_slice(&self) -> &[T] {
+        &self.buf
+    }
+
+    pub fn as_slice_mut(&mut self) -> &mut [T] {
+        &mut self.buf
+    }
 }
 
 impl<T: Clone + Copy + Default, const B: usize> Buffer<T> for FixedBuffer<T, B> {
@@ -52,6 +64,18 @@ impl<T: Clone + Copy + Default, const B: usize> Index<usize> for FixedBuffer<T, 
 impl<T: Clone + Copy + Default, const B: usize> IndexMut<usize> for FixedBuffer<T, B> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.buf[index]
+    }
+}
+
+impl<T: Clone + Copy + Default, const B: usize> AsRef<[T; B]> for FixedBuffer<T, B> {
+    fn as_ref(&self) -> &[T;B] {
+        &self.buf
+    }
+}
+
+impl<T: Clone + Copy + Default, const B: usize> AsMut<[T; B]> for FixedBuffer<T, B> {
+    fn as_mut(&mut self) -> &mut [T;B] {
+        &mut self.buf
     }
 }
 

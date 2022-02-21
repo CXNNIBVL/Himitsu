@@ -1,4 +1,4 @@
-use crate::errors::base64::Base64Error;
+pub use crate::errors::base64::Base64Error;
 
 const B64_CHARS: [char; 64] = [
 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -65,13 +65,11 @@ impl Base64Encoder {
             ]);
         }
 
-        let rem = chunks.remainder().to_owned();
-
         // Each PADDING character amounts to two zero bits that have been appended to the remaining bits
-        if rem.len() == 1 {
+        if chunks.remainder().len() == 1 {
 
-            let ia = rem[0] >> 2;
-            let ib = (rem[0] & 0b11 ) << 4;
+            let ia = chunks.remainder()[0] >> 2;
+            let ib = (chunks.remainder()[0] & 0b11 ) << 4;
 
             encoded.extend([
                 self.kind.value_at(ia as usize),
@@ -80,11 +78,11 @@ impl Base64Encoder {
                 PADDING
             ]);
 
-        } else if rem.len() == 2 {
+        } else if chunks.remainder().len() == 2 {
 
-            let ia = rem[0] >> 2;
-            let ib = ( ( rem[0] & 0b11 ) << 4) | ( ( rem[1] & 0b11110000 ) >> 4 );
-            let ic = ( rem[1] & 0b1111 ) << 2;
+            let ia = chunks.remainder()[0] >> 2;
+            let ib = ( ( chunks.remainder()[0] & 0b11 ) << 4) | ( ( chunks.remainder()[1] & 0b11110000 ) >> 4 );
+            let ic = ( chunks.remainder()[1] & 0b1111 ) << 2;
 
             encoded.extend([
                 self.kind.value_at(ia as usize),
@@ -175,19 +173,17 @@ fn decode_core(filtered: Vec<u8>) -> Result<Vec<u8>, Base64Error> {
         decoded.push( ( ch[2] << 6 ) | ch[3] );
     }
 
-    let rem = chunks.remainder().to_owned();
-
-    match rem.len() {
+    match chunks.remainder().len() {
         0 => {},
 
-        2 => decoded.push( ( rem[0] << 2 ) | ( rem[1] >> 4 ) ),
+        2 => decoded.push( ( chunks.remainder()[0] << 2 ) | ( chunks.remainder()[1] >> 4 ) ),
 
         3 => {
-            decoded.push( ( rem[0] << 2 ) | ( rem[1] >> 4) );
-            decoded.push( (rem[1] << 4) | (rem[2] >> 2) );
+            decoded.push( ( chunks.remainder()[0] << 2 ) | ( chunks.remainder()[1] >> 4) );
+            decoded.push( (chunks.remainder()[1] << 4) | (chunks.remainder()[2] >> 2) );
         },
 
-        _ => return Err(Base64Error::InvalidFormat(rem.len()))
+        _ => return Err(Base64Error::InvalidFormat(chunks.remainder().len()))
     }
 
     Ok(decoded)

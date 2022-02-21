@@ -1,5 +1,5 @@
 
-pub use crate::traits::buffer::Buffer;
+use crate::traits::buffer::Buffer;
 
 /// Adds information about common data (e.g Blocksize etc.) to a blockcipher primitive
 pub trait BlockCipherPrimitiveInfo {
