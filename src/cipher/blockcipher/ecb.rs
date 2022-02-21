@@ -43,7 +43,7 @@ impl<T: PrimitiveEncryption> BlockCipherEncryption for EcbEncryption<T> {
 
         // If the last block is complete then encrypt
         if self.buffer.is_full() {
-            self.primitive.mutate(&mut self.buffer, None);
+            self.primitive.mutate(&mut self.buffer, None, None);
         }
         // Else return error with number of missing bytes
         else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.missing() ) ) }
@@ -65,7 +65,7 @@ impl<T: PrimitiveEncryption> IOWrite for EcbEncryption<T> {
             // If push fails, then the buffer is full
             if !self.buffer.push(element) {
                 // Proceed to encrypt the buffer
-                self.primitive.mutate(&mut self.buffer, None);
+                self.primitive.mutate(&mut self.buffer, None, None);
 
                 // Push buffer contents into out
                 self.out.extend(self.buffer.extract());
@@ -112,7 +112,7 @@ impl<T: PrimitiveDecryption> BlockCipherDecryption for EcbDecryption<T> {
     fn finalize(&mut self) -> BlockCipherResult {
         // If the last block is complete then encrypt
         if self.buffer.is_full() {
-            self.primitive.mutate(&mut self.buffer, None);
+            self.primitive.mutate(&mut self.buffer, None, None);
         }
         // Else return error with number of missing bytes
         else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.missing() ) ) }
@@ -134,7 +134,7 @@ impl<T: PrimitiveDecryption> IOWrite for EcbDecryption<T> {
             // If push fails, then the buffer is full
             if !self.buffer.push(element) {
                 // Proceed to encrypt the buffer
-                self.primitive.mutate(&mut self.buffer, None);
+                self.primitive.mutate(&mut self.buffer, None, None);
 
                 // Push buffer contents into out
                 self.out.extend(self.buffer.extract());

@@ -199,7 +199,11 @@ impl PrimitiveEncryption for Aes {
         Self { config: aes_configuration(key) }
     }
 
-    fn mutate(&self, state: &mut Self::BlockType, xor_block: Option<&Self::BlockType>) {
+    fn mutate(&self, state: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>) {
+
+		if let Some(block) = xor_pre {
+			mem::xor_buffers(state.as_slice_mut(), block.as_slice());
+		}
 
 		add_roundkey(state.as_slice_mut(), &self.config.expanded_key[0..=16]);
 
@@ -219,7 +223,7 @@ impl PrimitiveEncryption for Aes {
 		let index = self.config.expanded_key.len(); 
 		add_roundkey(state.as_slice_mut(), &self.config.expanded_key[index - 16..]);
 
-		if let Some(block) = xor_block {
+		if let Some(block) = xor_post {
 			mem::xor_buffers(state.as_slice_mut(), block.as_slice());	
 		}
     }
@@ -231,9 +235,9 @@ impl PrimitiveDecryption for Aes {
         Self { config: aes_configuration(key) }
     }
 
-    fn mutate(&self, state: &mut Self::BlockType, xor_block: Option<&Self::BlockType>) {
+    fn mutate(&self, state: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>) {
 
-		if let Some(block) = xor_block {
+		if let Some(block) = xor_pre {
 			mem::xor_buffers(state.as_slice_mut(), block.as_slice());	
 		}
 
@@ -252,6 +256,10 @@ impl PrimitiveDecryption for Aes {
 		}
 
 		add_roundkey(state.as_slice_mut(), &self.config.expanded_key[0..=16]);
+
+		if let Some(block) = xor_post {
+			mem::xor_buffers(state.as_slice_mut(), block.as_slice());	
+		}
     }
 }
 
@@ -565,7 +573,7 @@ mod tests {
 
 		use crate::traits::block_primitive::BlockCipherPrimitiveEncryption;
 		let aes = <Aes as BlockCipherPrimitiveEncryption>::new(&key);
-		BlockCipherPrimitiveEncryption::mutate(&aes, &mut buf, None);
+		BlockCipherPrimitiveEncryption::mutate(&aes, &mut buf, None, None);
 
 		assert_eq!(expected, buf.as_slice());
 	}
@@ -585,7 +593,7 @@ mod tests {
 
 		use crate::traits::block_primitive::BlockCipherPrimitiveEncryption;
 		let aes = <Aes as BlockCipherPrimitiveEncryption>::new(&key);
-		BlockCipherPrimitiveEncryption::mutate(&aes, &mut buf, None);
+		BlockCipherPrimitiveEncryption::mutate(&aes, &mut buf, None, None);
 
 		assert_eq!(expected, buf.as_slice());
 	}
@@ -605,7 +613,7 @@ mod tests {
 
 		use crate::traits::block_primitive::BlockCipherPrimitiveEncryption;
 		let aes = <Aes as BlockCipherPrimitiveEncryption>::new(&key);
-		BlockCipherPrimitiveEncryption::mutate(&aes, &mut buf, None);
+		BlockCipherPrimitiveEncryption::mutate(&aes, &mut buf, None, None);
 
 		assert_eq!(expected, buf.as_slice());
 	}
@@ -651,7 +659,7 @@ mod tests {
 
 		use crate::traits::block_primitive::BlockCipherPrimitiveDecryption;
 		let aes = <Aes as BlockCipherPrimitiveDecryption>::new(&key);
-		BlockCipherPrimitiveDecryption::mutate(&aes, &mut buf, None);
+		BlockCipherPrimitiveDecryption::mutate(&aes, &mut buf, None, None);
 
 		assert_eq!(expected, buf.as_slice());
 	}

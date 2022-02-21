@@ -19,8 +19,8 @@ pub trait BlockCipherPrimitiveEncryption: BlockCipherPrimitiveInfo {
     /// Creates a new blockcipher primitive
     fn new(key: &[u8]) -> Self;
 
-    /// Mutates the mut_block, performs an xor with xor_block (if specified)
-    fn mutate(&self, mut_block: &mut Self::BlockType, xor_block: Option<&Self::BlockType>);
+    /// Mutates the mut_block, performs an xor with xor_pre pre mutation and xor_post post mutation (if specified)
+    fn mutate(&self, mut_block: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>);
 }
 
 /// Trait for a blockcipher primitive decryption
@@ -29,6 +29,6 @@ pub trait BlockCipherPrimitiveDecryption: BlockCipherPrimitiveInfo {
     /// Creates a new blockcipher primitive
     fn new(key: &[u8]) -> Self;
 
-    /// Mutates the mut_block, performs an xor with xor_block (if specified)
-    fn mutate(&self, mut_block: &mut Self::BlockType, xor_block: Option<&Self::BlockType>);
+    /// Mutates the mut_block, performs an xor with xor_pre pre mutation and xor_post post mutation (if specified)
+    fn mutate(&self, mut_block: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>);
 }
