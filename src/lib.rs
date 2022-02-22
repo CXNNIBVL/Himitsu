@@ -1,3 +1,4 @@
+extern crate thiserror;
 pub mod mem;
 pub mod encode;
 pub mod cipher;
