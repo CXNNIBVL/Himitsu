@@ -1,12 +1,11 @@
-
 use crate::traits::buffer::Buffer;
 
-/// Adds information about common data (e.g Blocksize etc.) to a blockcipher primitive
+/// Adds information about common data to a blockcipher primitive
 pub trait BlockCipherPrimitiveInfo {
     const BLOCKSIZE: usize;
     const KEYLEN_MIN: usize;
     const KEYLEN_MAX: usize;
-    type BlockType: Buffer<u8>;
+    type BlockType: Buffer<u8> + IntoIterator<Item=u8>;
 
     fn block_size(&self) -> usize { Self::BLOCKSIZE }
     fn keylen_min(&self) -> usize { Self::KEYLEN_MIN }
@@ -16,8 +15,11 @@ pub trait BlockCipherPrimitiveInfo {
 /// Trait for a blockcipher primitive encryption
 pub trait BlockCipherPrimitiveEncryption: BlockCipherPrimitiveInfo {
 
-    /// Creates a new blockcipher primitive
+    /// Construct new blockcipher primitive from key
     fn new(key: &[u8]) -> Self;
+
+    /// Get a fresh Block
+    fn new_block() -> Self::BlockType;
 
     /// Mutates the mut_block, performs an xor with xor_pre pre mutation and xor_post post mutation (if specified)
     fn mutate(&self, mut_block: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>);
@@ -26,8 +28,11 @@ pub trait BlockCipherPrimitiveEncryption: BlockCipherPrimitiveInfo {
 /// Trait for a blockcipher primitive decryption
 pub trait BlockCipherPrimitiveDecryption: BlockCipherPrimitiveInfo {
 
-    /// Creates a new blockcipher primitive
+    /// Construct new blockcipher primitive from key
     fn new(key: &[u8]) -> Self;
+
+    /// Get a fresh Block
+    fn new_block() -> Self::BlockType;
 
     /// Mutates the mut_block, performs an xor with xor_pre pre mutation and xor_post post mutation (if specified)
     fn mutate(&self, mut_block: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>);

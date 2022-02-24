@@ -1,10 +1,10 @@
-use std::cmp::min;
+use std::ops::BitXorAssign;
 
-/// XORs at least std:cmp::min(dst.len(), src.len()) src bytes into dst
-pub fn xor_buffers(dst: &mut [u8], src: &[u8]) {
-    let len = min(dst.len(), src.len());
-
-    for i in 0..len {
+/// XORs src bytes into dst
+/// 
+/// src and dst must be the same length, otherwise the function will panic
+pub fn xor_buffers<T: BitXorAssign + Copy>(dst: &mut [T], src: &[T]) {
+    for i in 0..src.len() {
         dst[i] ^= src[i];
     }
 }

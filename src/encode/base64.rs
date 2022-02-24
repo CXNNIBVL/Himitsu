@@ -1,4 +1,4 @@
-pub use crate::errors::base64::Base64Error;
+use crate::errors::base64::Base64Error;
 
 const B64_CHARS: [char; 64] = [
 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',

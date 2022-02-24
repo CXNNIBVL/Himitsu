@@ -1,11 +1,11 @@
-pub use crate::traits::block_primitive::{
+use crate::traits::blockcipher_primitive::{
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
     BlockCipherPrimitiveDecryption as PrimitiveDecryption, 
     BlockCipherPrimitiveInfo as PrimitiveInfo
 };
 
+use crate::util::buffer::FixedBuffer;
 use crate::mem;
-pub use crate::util::buffer::FixedBuffer;
 
 const S_BOX: [u8; 256] = [
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
@@ -184,7 +184,9 @@ const AES_KEYLEN_MAX: usize = 32;
 type AesBlockType = FixedBuffer<u8, AES_BLOCKSIZE>;
 
 /// Aes Encryption and Decryption provider
-pub struct Aes { config: AesConfig }
+pub struct Aes { 
+	config: AesConfig,
+}
 
 impl PrimitiveInfo for Aes {
     const BLOCKSIZE: usize = AES_BLOCKSIZE;
@@ -196,69 +198,79 @@ impl PrimitiveInfo for Aes {
 impl PrimitiveEncryption for Aes {
 
     fn new(key: &[u8]) -> Self {
-        Self { config: aes_configuration(key) }
-    }
+		Self { config: aes_configuration(key) }
+	}
+
+    fn new_block() -> Self::BlockType {
+		AesBlockType::new()
+	}
 
     fn mutate(&self, state: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>) {
 
 		if let Some(block) = xor_pre {
-			mem::xor_buffers(state.as_slice_mut(), block.as_slice());
+			mem::xor_buffers(state.as_mut(), block.as_ref());
 		}
 
-		add_roundkey(state.as_slice_mut(), &self.config.expanded_key[0..=16]);
+		add_roundkey(state.as_mut(), &self.config.expanded_key[0..16]);
 
 		for i in 0..self.config.rounds - 1 {
 
-			sub_bytes_enc(state.as_slice_mut());
-			shift_rows_enc(state.as_slice_mut());
-			mix_columns_enc(state.as_slice_mut());
+			sub_bytes_enc(state.as_mut());
+			shift_rows_enc(state.as_mut());
+			mix_columns_enc(state.as_mut());
 			
-			let index = 16 * (i + 1);
-			add_roundkey(state.as_slice_mut(), &self.config.expanded_key[index..index + 16]);
+			let start = 16 * (i + 1);
+			let end = start + 16;
+			add_roundkey(state.as_mut(), &self.config.expanded_key[start..end]);
 		} 
 
-		sub_bytes_enc(state.as_slice_mut());
-		shift_rows_enc(state.as_slice_mut());
+		sub_bytes_enc(state.as_mut());
+		shift_rows_enc(state.as_mut());
 		
-		let index = self.config.expanded_key.len(); 
-		add_roundkey(state.as_slice_mut(), &self.config.expanded_key[index - 16..]);
+		let index = self.config.expanded_key.len() - 16; 
+		add_roundkey(state.as_mut(), &self.config.expanded_key[index..]);
 
 		if let Some(block) = xor_post {
-			mem::xor_buffers(state.as_slice_mut(), block.as_slice());	
+			mem::xor_buffers(state.as_mut(), block.as_ref());	
 		}
     }
 }
 
 impl PrimitiveDecryption for Aes {
 
-    fn new(key: &[u8]) -> Self {
-        Self { config: aes_configuration(key) }
-    }
+	fn new(key: &[u8]) -> Self {
+		Self { config: aes_configuration(key) }
+	}
+
+    fn new_block() -> Self::BlockType {
+		AesBlockType::new()
+	}
 
     fn mutate(&self, state: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>) {
 
 		if let Some(block) = xor_pre {
-			mem::xor_buffers(state.as_slice_mut(), block.as_slice());	
+			mem::xor_buffers(state.as_mut(), block.as_ref());	
 		}
 
-		let index = self.config.expanded_key.len(); 
-		add_roundkey(state.as_slice_mut(), &self.config.expanded_key[index - 16..]);
-		sub_bytes_dec(state.as_slice_mut());
-		shift_rows_dec(state.as_slice_mut());
+		let index = self.config.expanded_key.len() - 16; 
+		add_roundkey(state.as_mut(), &self.config.expanded_key[index..]);
+		sub_bytes_dec(state.as_mut());
+		shift_rows_dec(state.as_mut());
 
 		for i in (0..self.config.rounds - 1).rev() {
-			let index = 16 * (i + 1);
-			add_roundkey(state.as_slice_mut(), &self.config.expanded_key[index..index + 16]);
+			let start = 16 * (i + 1);
+			let end = start + 16;
+			add_roundkey(state.as_mut(), &self.config.expanded_key[start..end]);
 
-			mix_columns_dec(state.as_slice_mut());
-			sub_bytes_dec(state.as_slice_mut());
-			shift_rows_dec(state.as_slice_mut());
+			mix_columns_dec(state.as_mut());
+			sub_bytes_dec(state.as_mut());
+			shift_rows_dec(state.as_mut());
 		}
 
-		add_roundkey(state.as_slice_mut(), &self.config.expanded_key[0..=16]);
+		add_roundkey(state.as_mut(), &self.config.expanded_key[0..16]);
 
 		if let Some(block) = xor_post {
-			mem::xor_buffers(state.as_slice_mut(), block.as_slice());	
+			mem::xor_buffers(state.as_mut(), block.as_ref());	
 		}
     }
 }
@@ -326,7 +338,8 @@ fn key_expansion(key: &[u8]) -> (Vec<u8>, usize) {
 			rcon_iteration += 1;
 		}
 
-		mem::xor_buffers(&mut tmp, &expanded_key[expanded_key.len() - acc_key_len..]);
+		let ix = expanded_key.len() - acc_key_len;
+		mem::xor_buffers(&mut tmp, &expanded_key[ix..ix + 4]);
 
 		expanded_key.extend(tmp);
 		bytes_generated += 4;
@@ -523,6 +536,32 @@ mod tests {
 	}
 
 	#[test]
+	fn test_key_expansion_bigger_32byte() {
+
+		let key_str = "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00";
+		let expected_str = "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+		62 63 63 63 62 63 63 63 62 63 63 63 62 63 63 63 
+		aa fb fb fb aa fb fb fb aa fb fb fb aa fb fb fb 
+		6f 6c 6c cf 0d 0f 0f ac 6f 6c 6c cf 0d 0f 0f ac 
+		7d 8d 8d 6a d7 76 76 91 7d 8d 8d 6a d7 76 76 91 
+		53 54 ed c1 5e 5b e2 6d 31 37 8e a2 3c 38 81 0e 
+		96 8a 81 c1 41 fc f7 50 3c 71 7a 3a eb 07 0c ab 
+		9e aa 8f 28 c0 f1 6d 45 f1 c6 e3 e7 cd fe 62 e9 
+		2b 31 2b df 6a cd dc 8f 56 bc a6 b5 bd bb aa 1e 
+		64 06 fd 52 a4 f7 90 17 55 31 73 f0 98 cf 11 19 
+		6d bb a9 0b 07 76 75 84 51 ca d3 31 ec 71 79 2f 
+		e7 b0 e8 9c 43 47 78 8b 16 76 0b 7b 8e b9 1a 62 
+		74 ed 0b a1 73 9b 7e 25 22 51 ad 14 ce 20 d4 3b 
+		10 f8 0a 17 53 bf 72 9c 45 c9 79 e7 cb 70 63 85 ";
+
+		let (key, expected) = (decode(key_str), decode(expected_str));
+		let (expanded, _ ) = key_expansion(&key);
+
+		assert_eq!(expanded, expected);
+	}
+
+	#[test]
 	fn test_add_roundkey() {
 
 		let key = decode("00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f");
@@ -571,11 +610,11 @@ mod tests {
 			buf.push(&element);
 		}
 
-		use crate::traits::block_primitive::BlockCipherPrimitiveEncryption;
+		use crate::traits::blockcipher_primitive::BlockCipherPrimitiveEncryption;
 		let aes = <Aes as BlockCipherPrimitiveEncryption>::new(&key);
-		BlockCipherPrimitiveEncryption::mutate(&aes, &mut buf, None, None);
+		PrimitiveEncryption::mutate(&aes, &mut buf, None, None);
 
-		assert_eq!(expected, buf.as_slice());
+		assert_eq!(expected, buf.as_ref());
 	}
 
 	#[test]
@@ -591,11 +630,11 @@ mod tests {
 			buf.push(&element);
 		}
 
-		use crate::traits::block_primitive::BlockCipherPrimitiveEncryption;
+		use crate::traits::blockcipher_primitive::BlockCipherPrimitiveEncryption;
 		let aes = <Aes as BlockCipherPrimitiveEncryption>::new(&key);
-		BlockCipherPrimitiveEncryption::mutate(&aes, &mut buf, None, None);
+		PrimitiveEncryption::mutate(&aes, &mut buf, None, None);
 
-		assert_eq!(expected, buf.as_slice());
+		assert_eq!(expected, buf.as_ref());
 	}
 
 	#[test]
@@ -611,11 +650,11 @@ mod tests {
 			buf.push(&element);
 		}
 
-		use crate::traits::block_primitive::BlockCipherPrimitiveEncryption;
+		use crate::traits::blockcipher_primitive::BlockCipherPrimitiveEncryption;
 		let aes = <Aes as BlockCipherPrimitiveEncryption>::new(&key);
-		BlockCipherPrimitiveEncryption::mutate(&aes, &mut buf, None, None);
+		PrimitiveEncryption::mutate(&aes, &mut buf, None, None);
 
-		assert_eq!(expected, buf.as_slice());
+		assert_eq!(expected, buf.as_ref());
 	}
 
 	#[test]
@@ -657,10 +696,10 @@ mod tests {
 			buf.push(&element);
 		}
 
-		use crate::traits::block_primitive::BlockCipherPrimitiveDecryption;
+		use crate::traits::blockcipher_primitive::BlockCipherPrimitiveDecryption;
 		let aes = <Aes as BlockCipherPrimitiveDecryption>::new(&key);
-		BlockCipherPrimitiveDecryption::mutate(&aes, &mut buf, None, None);
+		PrimitiveDecryption::mutate(&aes, &mut buf, None, None);
 
-		assert_eq!(expected, buf.as_slice());
+		assert_eq!(expected, buf.as_ref());
 	}
 }

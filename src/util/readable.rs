@@ -1,4 +1,4 @@
-pub use std::io::{Read as IORead, Result as IOResult, Error as IOError, ErrorKind as IOErrorKind};
+use std::io;
 
 pub struct Readable<T> 
     where T: IntoIterator<Item = u8>
@@ -14,20 +14,17 @@ impl<T: IntoIterator<Item = u8>> Readable<T> {
     }
 } 
 
-impl<T: IntoIterator<Item = u8>> IORead for Readable<T> {
+impl<T: IntoIterator<Item = u8>> io::Read for Readable<T> {
 
-    fn read(&mut self, buf: &mut [u8]) -> IOResult<usize> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
 
         let mut read = 0;
 
         for b in buf {
-            match self.it.next() {
-                Some(v) => {
-                    *b = v;
-                    read += 1;
-                },
-                None => return Err(IOError::from(IOErrorKind::UnexpectedEof))
-            }
+            if let Some(v) = self.it.next() {
+                *b = v;
+                read += 1;
+            } else { break; }
         }
 
         Ok(read)
@@ -46,19 +43,12 @@ mod tests {
     fn test_readable() {
 
         let data = vec![1 , 2, 3, 4];
-        let mut rdb: Readable<Vec<u8>> = Readable::new(data);
-        let mut buf = vec![5, 5, 5, 5];
+        let mut rdb: Readable<Vec<u8>> = Readable::new(data.clone());
+        let mut out = Vec::new();
 
-        match rdb.read(&mut buf) {
-            Ok(v) => assert_eq!(4, v),
-            _ => assert!(false)
-        }
+        rdb.read_to_end(&mut out).unwrap();
 
-
-        match rdb.read(&mut buf) {
-            Ok(_) => assert!(false),
-            _ => assert!(true)
-        }
+        assert_eq!(data, out);
     }
 
 }
