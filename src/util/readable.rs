@@ -29,7 +29,6 @@ impl<T: IntoIterator<Item = u8>> io::Read for Readable<T> {
 
         Ok(read)
     }
-    
 }
 
 pub struct XofReadable<T> 

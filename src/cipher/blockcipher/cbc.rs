@@ -14,6 +14,7 @@ use crate::traits::blockcipher_primitive::{
 };
 use crate::traits::buffer::Buffer;
 
+/// CBC Encryption Provider
 pub struct CbcEncryption<T: PrimitiveEncryption> {
     primitive: T,
     buffer: T::BlockType,
@@ -29,6 +30,7 @@ impl<T: PrimitiveEncryption> BlockCipherInfo for CbcEncryption<T> {
 
 impl<T: PrimitiveEncryption> CbcEncryption<T> {
 
+    /// Create a new CBC Encryption instance
     pub fn new(key: &[u8], iv: &[u8]) -> Self {
 
         let primitive = T::new(key);

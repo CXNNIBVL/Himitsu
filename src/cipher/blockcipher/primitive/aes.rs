@@ -178,10 +178,11 @@ const RCON: [u8; 256] = [
 	0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d
 ];
 
-const AES_BLOCKSIZE: usize = 16;
-const AES_KEYLEN_MIN: usize = 16;
-const AES_KEYLEN_MAX: usize = 32;
-type AesBlockType = FixedBuffer<u8, AES_BLOCKSIZE>;
+pub const AES_BLOCKSIZE: usize = 16;
+pub const AES_128_KEYLEN: usize = 16;
+pub const AES_192_KEYLEN: usize = 24;
+pub const AES_256_KEYLEN: usize = 32;
+pub type AesBlockType = FixedBuffer<u8, AES_BLOCKSIZE>;
 
 /// Aes Encryption and Decryption provider
 pub struct Aes { 
@@ -190,8 +191,8 @@ pub struct Aes {
 
 impl PrimitiveInfo for Aes {
     const BLOCKSIZE: usize = AES_BLOCKSIZE;
-    const KEYLEN_MIN: usize = AES_KEYLEN_MIN;
-    const KEYLEN_MAX: usize = AES_KEYLEN_MAX;
+    const KEYLEN_MIN: usize = AES_128_KEYLEN;
+    const KEYLEN_MAX: usize = AES_256_KEYLEN;
     type BlockType = AesBlockType;
 }
 
@@ -303,20 +304,20 @@ fn key_expansion_rcon(k: &mut [u8; 4], iteration: usize) {
 fn key_expansion(key: &[u8]) -> (Vec<u8>, usize) {
 
 	let (
-		capacity,
 		rounds, 
 		copy, 
 		acc_key_len
 	) = match key.len() {
-		0..=16 => { (11 * AES_BLOCKSIZE, 10, key.len(), 16) },
+		0..=AES_128_KEYLEN => { (10, key.len(), AES_128_KEYLEN) },
 
-		17..=24 => { (13 * AES_BLOCKSIZE, 12, key.len(), 24) },
+		17..=AES_192_KEYLEN => { (12, key.len(), AES_192_KEYLEN) },
 
-		25..=32 => { (15 * AES_BLOCKSIZE, 14, key.len(), 32) },
+		25..=AES_256_KEYLEN => { (14, key.len(), AES_256_KEYLEN) },
 
-		_ => { (15 * AES_BLOCKSIZE, 14, 32, 32) }
+		_ => { (14, AES_256_KEYLEN, AES_256_KEYLEN) }
 	};
 
+	let capacity = (rounds + 1) * AES_BLOCKSIZE;
 	let mut expanded_key = Vec::with_capacity(capacity);
 	expanded_key.extend(&key[0..copy]);
 
