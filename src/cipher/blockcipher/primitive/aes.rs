@@ -4,7 +4,6 @@ use crate::traits::blockcipher_primitive::{
     BlockCipherPrimitiveInfo as PrimitiveInfo
 };
 
-use crate::util::buffer::FixedBuffer;
 use crate::mem;
 
 const S_BOX: [u8; 256] = [
@@ -182,31 +181,29 @@ pub const AES_BLOCKSIZE: usize = 16;
 pub const AES_128_KEYLEN: usize = 16;
 pub const AES_192_KEYLEN: usize = 24;
 pub const AES_256_KEYLEN: usize = 32;
-pub type AesBlockType = FixedBuffer<u8, AES_BLOCKSIZE>;
+pub type AesBlock = [u8; AES_BLOCKSIZE];
 
 /// Aes Encryption and Decryption provider
 pub struct Aes { 
 	config: AesConfig,
 }
 
+impl Aes {
+	/// Create a new Aes instance
+	pub fn new(key: &[u8]) -> Self {
+		Self { config: aes_configuration(key) }
+	}
+}
+
 impl PrimitiveInfo for Aes {
     const BLOCKSIZE: usize = AES_BLOCKSIZE;
     const KEYLEN_MIN: usize = AES_128_KEYLEN;
     const KEYLEN_MAX: usize = AES_256_KEYLEN;
-    type BlockType = AesBlockType;
 }
 
-impl PrimitiveEncryption for Aes {
+impl PrimitiveEncryption<AES_BLOCKSIZE> for Aes {
 
-    fn new(key: &[u8]) -> Self {
-		Self { config: aes_configuration(key) }
-	}
-
-    fn new_block() -> Self::BlockType {
-		AesBlockType::new()
-	}
-
-    fn mutate(&self, state: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>) {
+    fn encrypt(&self, state: &mut AesBlock, xor_pre: Option<&AesBlock>, xor_post: Option<&AesBlock>) {
 
 		if let Some(block) = xor_pre {
 			mem::xor_buffers(state.as_mut(), block.as_ref());
@@ -237,17 +234,9 @@ impl PrimitiveEncryption for Aes {
     }
 }
 
-impl PrimitiveDecryption for Aes {
+impl PrimitiveDecryption<AES_BLOCKSIZE> for Aes {
 
-	fn new(key: &[u8]) -> Self {
-		Self { config: aes_configuration(key) }
-	}
-
-    fn new_block() -> Self::BlockType {
-		AesBlockType::new()
-	}
-
-    fn mutate(&self, state: &mut Self::BlockType, xor_pre: Option<&Self::BlockType>, xor_post: Option<&Self::BlockType>) {
+    fn decrypt(&self, state: &mut AesBlock, xor_pre: Option<&AesBlock>, xor_post: Option<&AesBlock>) {
 
 		if let Some(block) = xor_pre {
 			mem::xor_buffers(state.as_mut(), block.as_ref());	
@@ -321,7 +310,7 @@ fn key_expansion(key: &[u8]) -> (Vec<u8>, usize) {
 	let mut expanded_key = Vec::with_capacity(capacity);
 	expanded_key.extend(&key[0..copy]);
 
-	while expanded_key.len() != acc_key_len { expanded_key.push(0x00); }
+	while expanded_key.len() != acc_key_len { expanded_key.push(0); }
 
 	let mut rcon_iteration = 1;
 	let mut bytes_generated = acc_key_len;
@@ -604,16 +593,14 @@ mod tests {
 		let key = decode("000102030405060708090a0b0c0d0e0f");
 		let expected = decode("69c4e0d86a7b0430d8cdb78070b4c55a");
 
-		use crate::traits::buffer::Buffer;
-		let mut buf = AesBlockType::new();
+		let mut buf = [0;AES_BLOCKSIZE];
 
-		for element in plaintext {
-			buf.push(&element);
+		for (i, element) in plaintext.into_iter().enumerate() {
+			buf[i] = element;
 		}
 
-		use crate::traits::blockcipher_primitive::BlockCipherPrimitiveEncryption;
-		let aes = <Aes as BlockCipherPrimitiveEncryption>::new(&key);
-		PrimitiveEncryption::mutate(&aes, &mut buf, None, None);
+		let aes = Aes::new(&key);
+		aes.encrypt(&mut buf, None, None);
 
 		assert_eq!(expected, buf.as_ref());
 	}
@@ -624,16 +611,14 @@ mod tests {
 		let key = decode("000102030405060708090a0b0c0d0e0f1011121314151617");
 		let expected = decode("dda97ca4864cdfe06eaf70a0ec0d7191");
 
-		use crate::traits::buffer::Buffer;
-		let mut buf = AesBlockType::new();
+		let mut buf = [0;AES_BLOCKSIZE];
 
-		for element in plaintext {
-			buf.push(&element);
+		for (i, element) in plaintext.into_iter().enumerate() {
+			buf[i] = element;
 		}
 
-		use crate::traits::blockcipher_primitive::BlockCipherPrimitiveEncryption;
-		let aes = <Aes as BlockCipherPrimitiveEncryption>::new(&key);
-		PrimitiveEncryption::mutate(&aes, &mut buf, None, None);
+		let aes = Aes::new(&key);
+		aes.encrypt(&mut buf, None, None);
 
 		assert_eq!(expected, buf.as_ref());
 	}
@@ -644,16 +629,14 @@ mod tests {
 		let key = decode("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
 		let expected = decode("8ea2b7ca516745bfeafc49904b496089");
 
-		use crate::traits::buffer::Buffer;
-		let mut buf = AesBlockType::new();
+		let mut buf = [0;AES_BLOCKSIZE];
 
-		for element in plaintext {
-			buf.push(&element);
+		for (i, element) in plaintext.into_iter().enumerate() {
+			buf[i] = element;
 		}
 
-		use crate::traits::blockcipher_primitive::BlockCipherPrimitiveEncryption;
-		let aes = <Aes as BlockCipherPrimitiveEncryption>::new(&key);
-		PrimitiveEncryption::mutate(&aes, &mut buf, None, None);
+		let aes = Aes::new(&key);
+		aes.encrypt(&mut buf, None, None);
 
 		assert_eq!(expected, buf.as_ref());
 	}
@@ -690,16 +673,14 @@ mod tests {
 		let key = decode("000102030405060708090a0b0c0d0e0f");
 		let expected = decode("00112233445566778899aabbccddeeff");
 
-		use crate::traits::buffer::Buffer;
-		let mut buf = AesBlockType::new();
+		let mut buf = [0;AES_BLOCKSIZE];
 
-		for element in plaintext {
-			buf.push(&element);
+		for (i, element) in plaintext.into_iter().enumerate() {
+			buf[i] = element;
 		}
 
-		use crate::traits::blockcipher_primitive::BlockCipherPrimitiveDecryption;
-		let aes = <Aes as BlockCipherPrimitiveDecryption>::new(&key);
-		PrimitiveDecryption::mutate(&aes, &mut buf, None, None);
+		let aes = Aes::new(&key);
+		aes.decrypt(&mut buf, None, None);
 
 		assert_eq!(expected, buf.as_ref());
 	}
