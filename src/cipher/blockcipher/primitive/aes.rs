@@ -1,4 +1,4 @@
-use crate::traits::blockcipher_primitive::{
+use crate::traits::cipher::{
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
     BlockCipherPrimitiveDecryption as PrimitiveDecryption, 
     BlockCipherPrimitiveInfo as PrimitiveInfo

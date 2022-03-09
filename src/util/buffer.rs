@@ -162,6 +162,18 @@ impl<T: Clone + Copy + Default, const B: usize> From<[T;B]> for FixedBuffer<T, B
     }
 }
 
+impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a [T;B]> for FixedBuffer<T, B> {
+    fn from(buf: &'a [T;B]) -> Self {
+        Self { buf: buf.clone(), capacity: 0}
+    }
+}
+
+impl<T: Clone + Copy + Default, const B: usize> From<FixedBuffer<T, B>> for [T;B] {
+    fn from(buf: FixedBuffer<T,B>) -> [T;B] {
+        buf.buf
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

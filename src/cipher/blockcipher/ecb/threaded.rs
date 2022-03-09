@@ -1,99 +1,58 @@
-use crate::traits::blockcipher::{
-    BlockCipherEncryption,
-    BlockCipherDecryption,
-    BlockCipherInfo,
-    BlockCipherResult
-};
-use std::io::{Write as ioWrite, Result as ioResult};
+
 use std::mem;
-use crate::errors::blockcipher::BlockCipherError;
-use crate::util::readable::Readable;
-use crate::traits::blockcipher_primitive::{ 
+use std::io;
+use crate::traits::cipher::{
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
-    BlockCipherPrimitiveDecryption as PrimitiveDecryption,
+    BlockCipherPrimitiveDecryption as PrimitiveDecryption
 };
+use crate::cipher::blockcipher::primitive::threaded::{
+    ThreadedCipherEncryption as ThreadedEncryption,
+    ThreadedCipherDecryption as ThreadedDecryption
+};
+use crate::util::{
+    buffer::FixedBuffer,
+    readable::Readable
+};
+use crate::errors::blockcipher::BlockCipherError;
 
-use crate::util::buffer::FixedBuffer;
-
-pub trait WithEcbEncryption<const BLOCKSIZE: usize> {
-    type Primitive: PrimitiveEncryption<BLOCKSIZE>;
-    fn with_ecb_encryption(self) -> EcbEncryption<Self::Primitive, BLOCKSIZE>;
+pub struct ThreadedEcbEncryption<T, const BLOCKSIZE: usize> 
+    where T: PrimitiveEncryption<BLOCKSIZE> + Send + Sync + 'static
+{
+    primitive: ThreadedEncryption<T, BLOCKSIZE>,
+    buffer: FixedBuffer<u8, BLOCKSIZE>
 }
 
-impl<T: PrimitiveEncryption<B>, const B: usize> WithEcbEncryption<B> for T {
-    type Primitive = Self;
-    fn with_ecb_encryption(self) -> EcbEncryption<Self::Primitive, B> {
-        EcbEncryption::new(self)
-    }
-}
-
-pub trait WithEcbDecryption<const BLOCKSIZE: usize> {
-    type Primitive: PrimitiveDecryption<BLOCKSIZE>;
-    fn with_ecb_decryption(self) -> EcbDecryption<Self::Primitive, BLOCKSIZE>;
-}
-
-impl<T: PrimitiveDecryption<B>, const B: usize> WithEcbDecryption<B> for T {
-    type Primitive = Self;
-    fn with_ecb_decryption(self) -> EcbDecryption<Self::Primitive, B> {
-        EcbDecryption::new(self)
-    }
-}
-
-/// ECB encryption provider
-/// 
-/// Provides encryption in Electronic Codebook Mode based on a Primitive T eg. Aes
-pub struct EcbEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
-    primitive: T,
-    buffer: FixedBuffer<u8, BLOCKSIZE>,
-    out: Vec<u8>
-}
-
-impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherInfo for EcbEncryption<T,B> {
-    const BLOCKSIZE: usize = T::BLOCKSIZE;
-    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
-    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
-}
-
-impl<T: PrimitiveEncryption<B>, const B: usize> EcbEncryption<T, B> {
-
-    /// Create a new instance
-    pub fn new(primitive: T) -> Self {
+impl<T, const B: usize> ThreadedEcbEncryption<T, B> 
+    where T: PrimitiveEncryption<B> + Send + Sync + 'static
+{
+    /// Create a new instance from a Cipher primitive with the number of threads this function will use
+    pub fn new(primitive: T, threads: usize) -> Self {
         Self { 
-            primitive,
-            buffer: FixedBuffer::new(),
-            out: Vec::new(),
+            primitive: ThreadedEncryption::new(primitive, threads),
+            buffer: FixedBuffer::new()
         }
     }
 
     fn process_buffer(&mut self) {
-
-        // Encrypt the buffer
-        self.primitive.encrypt(self.buffer.as_mut(), None, None);
-
-        // Extract the encrypted buffer and replace it with a fresh one
-        let encrypted = mem::replace(&mut self.buffer, FixedBuffer::new());
-
-        // Append the extracted buffer to out
-        self.out.extend(encrypted);
+        let mut_block = mem::replace(&mut self.buffer, FixedBuffer::new());
+        self.primitive.put(mut_block.into(), None, None);
     }
-}
 
-impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherEncryption for EcbEncryption<T, B> {
-    fn finalize(&mut self) -> BlockCipherResult {
+    /// Resets the cipher and returns a Readable, containing the processed contents
+    pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
 
-        // If the last block is complete then encrypt
         if self.buffer.is_full() { self.process_buffer(); }
-        // Else return error with number of missing bytes
-        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
+        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock(self.buffer.capacity()) ) }
 
-        // Replace out with a fresh vec and return a readable with the contents of out
-        Ok( Readable::new( mem::replace(&mut self.out, Vec::new()) ))
+        let out = self.primitive.finalize();
+        Ok( Readable::new(out) )
     }
 }
 
-impl<T: PrimitiveEncryption<B>, const B: usize> ioWrite for EcbEncryption<T, B> {
-
-    fn write(&mut self, buf: &[u8]) -> ioResult<usize> {
+impl<T, const B: usize> io::Write for ThreadedEcbEncryption<T,B> 
+    where T: PrimitiveEncryption<B> + Send + Sync + 'static
+{
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let mut written = 0;
 
         // Push buf until all contents have been written, if necessary, then encrypt buffer
@@ -107,66 +66,52 @@ impl<T: PrimitiveEncryption<B>, const B: usize> ioWrite for EcbEncryption<T, B> 
         Ok(written)
     }
 
-    fn flush(&mut self) -> ioResult<()> {
+    fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
-    
 }
 
-/// ECB decryption provider
-/// 
-/// Provides decryption in Electronic Codebook Mode based on a Primitive T eg. Aes
-pub struct EcbDecryption<T: PrimitiveDecryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
-    primitive: T,
-    buffer: FixedBuffer<u8, BLOCKSIZE>,
-    out: Vec<u8>
+
+
+pub struct ThreadedEcbDecryption<T, const BLOCKSIZE: usize> 
+    where T: PrimitiveDecryption<BLOCKSIZE> + Send + Sync + 'static
+{
+    primitive: ThreadedDecryption<T, BLOCKSIZE>,
+    buffer: FixedBuffer<u8, BLOCKSIZE>
 }
 
-impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherInfo for EcbDecryption<T, B> {
-    const BLOCKSIZE: usize = T::BLOCKSIZE;
-    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
-    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
-}
+impl<T, const B: usize> ThreadedEcbDecryption<T, B> 
+    where T: PrimitiveDecryption<B> + Send + Sync + 'static
+{
 
-impl<T: PrimitiveDecryption<B>, const B: usize> EcbDecryption<T, B> {
-
-    /// Create a new instance
-    pub fn new(primitive: T) -> Self {
+    /// Create a new instance from a Cipher primitive with the number of threads this function will use
+    pub fn new(primitive: T, threads: usize) -> Self {
         Self { 
-            primitive,
-            buffer: FixedBuffer::new(),
-            out: Vec::new()
+            primitive: ThreadedDecryption::new(primitive, threads),
+            buffer: FixedBuffer::new()
         }
     }
 
     fn process_buffer(&mut self) {
-
-        // Encrypt the buffer
-        self.primitive.decrypt(self.buffer.as_mut(), None, None);
-
-        // Extract the encrypted buffer and replace it with a fresh one
-        let decrypted = mem::replace(&mut self.buffer, FixedBuffer::new());
-
-        // Append the extracted buffer to out
-        self.out.extend(decrypted);
+        let mut_block = mem::replace(&mut self.buffer, FixedBuffer::new());
+        self.primitive.put(mut_block.into(), None, None);
     }
-}
 
-impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherDecryption for EcbDecryption<T, B> {
-    fn finalize(&mut self) -> BlockCipherResult {
-        // If the last block is complete then encrypt
+    /// Resets the cipher and returns a Readable, containing the processed contents
+    pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
+
         if self.buffer.is_full() { self.process_buffer(); }
-        // Else return error with number of missing bytes
-        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
+        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock(self.buffer.capacity()) ) }
 
-        // Replace out with a fresh vec and return a readable with the contents of out
-        Ok( Readable::new( std::mem::replace(&mut self.out, Vec::new()) ))
+        let out = self.primitive.finalize();
+        Ok( Readable::new(out) )
     }
 }
 
-impl<T: PrimitiveDecryption<B>, const B: usize> ioWrite for EcbDecryption<T, B> {
-
-    fn write(&mut self, buf: &[u8]) -> ioResult<usize> {
+impl<T, const B: usize> io::Write for ThreadedEcbDecryption<T,B> 
+    where T: PrimitiveDecryption<B> + Send + Sync + 'static
+{
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let mut written = 0;
 
         // Push buf until all contents have been written, if necessary, then encrypt buffer
@@ -180,18 +125,16 @@ impl<T: PrimitiveDecryption<B>, const B: usize> ioWrite for EcbDecryption<T, B> 
         Ok(written)
     }
 
-    fn flush(&mut self) -> ioResult<()> {
+    fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
-    
 }
 
 #[cfg(test)]
 mod tests {
-
-    use std::io::Read;
+    use std::io::{Read, Write};
     use crate::cipher::blockcipher::primitive::aes;
-    use super::*;
+    use crate::traits::cipher::*;
 
     fn decode(s: &str) -> Vec<u8> {
 		use crate::encode::HexEncoder;
@@ -215,7 +158,7 @@ mod tests {
                 let expected = decode($expected);
                 let mut output = Vec::new();
                 
-                let mut cipher = <$primitive>::new(&key).with_ecb_encryption();
+                let mut cipher = <$primitive>::new(&key).with_threaded_ecb_encryption(4);
                 cipher.write_all(&input).unwrap();
                 let mut reader = cipher.finalize().unwrap();
                 reader.read_to_end(&mut output).unwrap();
@@ -243,7 +186,7 @@ mod tests {
                 let expected = decode($expected);
                 let mut output = Vec::new();
                 
-                let mut cipher = <$primitive>::new(&key).with_ecb_decryption();
+                let mut cipher = <$primitive>::new(&key).with_threaded_ecb_decryption(4);
                 cipher.write_all(&input).unwrap();
                 let mut reader = cipher.finalize().unwrap();
                 reader.read_to_end(&mut output).unwrap();
@@ -256,7 +199,7 @@ mod tests {
     // Example values from [NIST](https://csrc.nist.gov/projects/cryptographic-standards-and-guidelines/example-values)
 
     ecb_test_enc!(
-        test_ecb_aes128_enc,
+        test_threaded_ecb_aes128_enc,
         aes::Aes,
         "2B7E1516 28AED2A6 ABF71588 09CF4F3C",
         "6BC1BEE2 2E409F96 E93D7E11 7393172A AE2D8A57 1E03AC9C 9EB76FAC 45AF8E51 30C81C46 A35CE411 E5FBC119 1A0A52EF F69F2445 DF4F9B17 AD2B417B E66C3710",
@@ -264,7 +207,7 @@ mod tests {
     );
 
     ecb_test_dec!(
-        test_ecb_aes128_dec,
+        test_threaded_ecb_aes128_dec,
         aes::Aes,
         "2B7E1516 28AED2A6 ABF71588 09CF4F3C",
         "3AD77BB4 0D7A3660 A89ECAF3 2466EF97 F5D3D585 03B9699D E785895A 96FDBAAF 43B1CD7F 598ECE23 881B00E3 ED030688 7B0C785E 27E8AD3F 82232071 04725DD4",
@@ -272,7 +215,7 @@ mod tests {
     );
 
     ecb_test_enc!(
-        test_ecb_aes192_enc,
+        test_threaded_ecb_aes192_enc,
         aes::Aes,
         "8E73B0F7 DA0E6452 C810F32B 809079E5 62F8EAD2 522C6B7B",
         "6BC1BEE2 2E409F96 E93D7E11 7393172A AE2D8A57 1E03AC9C 9EB76FAC 45AF8E51 30C81C46 A35CE411 E5FBC119 1A0A52EF F69F2445 DF4F9B17 AD2B417B E66C3710",
@@ -280,7 +223,7 @@ mod tests {
     );
 
     ecb_test_dec!(
-        test_ecb_aes192_dec,
+        test_threaded_ecb_aes192_dec,
         aes::Aes,
         "8E73B0F7 DA0E6452 C810F32B 809079E5 62F8EAD2 522C6B7B",
         "BD334F1D 6E45F25F F712A214 571FA5CC 97410484 6D0AD3AD 7734ECB3 ECEE4EEF EF7AFD22 70E2E60A DCE0BA2F ACE6444E 9A4B41BA 738D6C72 FB166916 03C18E0E",
@@ -288,7 +231,7 @@ mod tests {
     );
 
     ecb_test_enc!(
-        test_ecb_aes256_enc,
+        test_threaded_ecb_aes256_enc,
         aes::Aes,
         "603DEB10 15CA71BE 2B73AEF0 857D7781 1F352C07 3B6108D7 2D9810A3 0914DFF4",
         "6BC1BEE2 2E409F96 E93D7E11 7393172A AE2D8A57 1E03AC9C 9EB76FAC 45AF8E51 30C81C46 A35CE411 E5FBC119 1A0A52EF F69F2445 DF4F9B17 AD2B417B E66C3710",
@@ -296,7 +239,7 @@ mod tests {
     );
 
     ecb_test_dec!(
-        test_ecb_aes256_dec,
+        test_threaded_ecb_aes256_dec,
         aes::Aes,
         "603DEB10 15CA71BE 2B73AEF0 857D7781 1F352C07 3B6108D7 2D9810A3 0914DFF4",
         "F3EED1BD B5D2A03C 064B5A7E 3DB181F8 591CCB10 D410ED26 DC5BA74A 31362870 B6ED21B9 9CA6F4F9 F153E7B1 BEAFED1D 23304B7A 39F9F3FF 067D8D8F 9E24ECC7",
