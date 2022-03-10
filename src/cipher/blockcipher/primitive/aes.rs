@@ -185,13 +185,13 @@ pub type AesBlock = [u8; AES_BLOCKSIZE];
 
 /// Aes Encryption and Decryption provider
 pub struct Aes { 
-	config: AesConfig,
+	cfg: AesCfg,
 }
 
 impl Aes {
 	/// Create a new Aes instance
 	pub fn new(key: &[u8]) -> Self {
-		Self { config: aes_configuration(key) }
+		Self { cfg: aes_configuration(key) }
 	}
 }
 
@@ -209,9 +209,9 @@ impl PrimitiveEncryption<AES_BLOCKSIZE> for Aes {
 			mem::xor_buffers(state.as_mut(), block.as_ref());
 		}
 
-		add_roundkey(state.as_mut(), &self.config.expanded_key[0..16]);
+		add_roundkey(state.as_mut(), &self.cfg.expanded_key[0..16]);
 
-		for i in 0..self.config.rounds - 1 {
+		for i in 0..self.cfg.rounds - 1 {
 
 			sub_bytes_enc(state.as_mut());
 			shift_rows_enc(state.as_mut());
@@ -219,14 +219,14 @@ impl PrimitiveEncryption<AES_BLOCKSIZE> for Aes {
 			
 			let start = 16 * (i + 1);
 			let end = start + 16;
-			add_roundkey(state.as_mut(), &self.config.expanded_key[start..end]);
+			add_roundkey(state.as_mut(), &self.cfg.expanded_key[start..end]);
 		} 
 
 		sub_bytes_enc(state.as_mut());
 		shift_rows_enc(state.as_mut());
 		
-		let index = self.config.expanded_key.len() - 16; 
-		add_roundkey(state.as_mut(), &self.config.expanded_key[index..]);
+		let index = self.cfg.expanded_key.len() - 16; 
+		add_roundkey(state.as_mut(), &self.cfg.expanded_key[index..]);
 
 		if let Some(block) = xor_post {
 			mem::xor_buffers(state.as_mut(), block.as_ref());	
@@ -242,22 +242,22 @@ impl PrimitiveDecryption<AES_BLOCKSIZE> for Aes {
 			mem::xor_buffers(state.as_mut(), block.as_ref());	
 		}
 
-		let index = self.config.expanded_key.len() - 16; 
-		add_roundkey(state.as_mut(), &self.config.expanded_key[index..]);
+		let index = self.cfg.expanded_key.len() - 16; 
+		add_roundkey(state.as_mut(), &self.cfg.expanded_key[index..]);
 		sub_bytes_dec(state.as_mut());
 		shift_rows_dec(state.as_mut());
 
-		for i in (0..self.config.rounds - 1).rev() {
+		for i in (0..self.cfg.rounds - 1).rev() {
 			let start = 16 * (i + 1);
 			let end = start + 16;
-			add_roundkey(state.as_mut(), &self.config.expanded_key[start..end]);
+			add_roundkey(state.as_mut(), &self.cfg.expanded_key[start..end]);
 
 			mix_columns_dec(state.as_mut());
 			sub_bytes_dec(state.as_mut());
 			shift_rows_dec(state.as_mut());
 		}
 
-		add_roundkey(state.as_mut(), &self.config.expanded_key[0..16]);
+		add_roundkey(state.as_mut(), &self.cfg.expanded_key[0..16]);
 
 		if let Some(block) = xor_post {
 			mem::xor_buffers(state.as_mut(), block.as_ref());	
@@ -265,14 +265,14 @@ impl PrimitiveDecryption<AES_BLOCKSIZE> for Aes {
     }
 }
 
-struct AesConfig {
+struct AesCfg {
     expanded_key: Vec<u8>,
     rounds: usize,
 }
 
-fn aes_configuration(key: &[u8]) -> AesConfig {
+fn aes_configuration(key: &[u8]) -> AesCfg {
 	let (expanded_key, rounds) = key_expansion(key);
-    AesConfig { expanded_key, rounds }
+    AesCfg { expanded_key, rounds }
 }
 
 fn key_expansion_gcon(k: &mut [u8; 4]) {

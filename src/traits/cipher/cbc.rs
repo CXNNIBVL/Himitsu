@@ -3,7 +3,7 @@ use crate::traits::cipher::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption
 };
 
-use crate::cipher::blockcipher::cbc::{CbcEncryption, CbcDecryption};
+use crate::cipher::blockcipher::cbc::{CbcEncryption, CbcDecryption, ThreadedCbcDecryption};
 
 pub trait WithCbcEncryption<const BLOCKSIZE: usize> {
     type Primitive: PrimitiveEncryption<BLOCKSIZE>;
@@ -26,5 +26,19 @@ impl<T: PrimitiveDecryption<B>, const B: usize> WithCbcDecryption<B> for T {
     type Primitive = Self;
     fn with_cbc_decryption(self, iv: &[u8]) -> CbcDecryption<Self::Primitive, B> {
         CbcDecryption::new(self, iv)
+    }
+}
+
+pub trait WithThreadedCbcDecryption<const BLOCKSIZE: usize> {
+    type Primitive: PrimitiveDecryption<BLOCKSIZE> + Send + Sync + 'static;
+    fn with_threaded_cbc_decryption(self, iv: &[u8], threads: usize) -> ThreadedCbcDecryption<Self::Primitive, BLOCKSIZE>;
+}
+
+impl<T, const B: usize> WithThreadedCbcDecryption<B> for T 
+    where T: PrimitiveDecryption<B> + Send + Sync + 'static
+{
+    type Primitive = Self;
+    fn with_threaded_cbc_decryption(self, iv: &[u8], threads: usize) -> ThreadedCbcDecryption<Self::Primitive, B> {
+        ThreadedCbcDecryption::new(self, iv, threads)
     }
 }
