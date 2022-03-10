@@ -588,60 +588,6 @@ mod tests {
 	}
 
 	#[test]
-	fn test_aes_128_enc() {
-		let plaintext = decode("00112233445566778899aabbccddeeff");
-		let key = decode("000102030405060708090a0b0c0d0e0f");
-		let expected = decode("69c4e0d86a7b0430d8cdb78070b4c55a");
-
-		let mut buf = [0;AES_BLOCKSIZE];
-
-		for (i, element) in plaintext.into_iter().enumerate() {
-			buf[i] = element;
-		}
-
-		let aes = Aes::new(&key);
-		aes.encrypt(&mut buf, None, None);
-
-		assert_eq!(expected, buf.as_ref());
-	}
-
-	#[test]
-	fn test_aes_192_enc() {
-		let plaintext = decode("00112233445566778899aabbccddeeff");
-		let key = decode("000102030405060708090a0b0c0d0e0f1011121314151617");
-		let expected = decode("dda97ca4864cdfe06eaf70a0ec0d7191");
-
-		let mut buf = [0;AES_BLOCKSIZE];
-
-		for (i, element) in plaintext.into_iter().enumerate() {
-			buf[i] = element;
-		}
-
-		let aes = Aes::new(&key);
-		aes.encrypt(&mut buf, None, None);
-
-		assert_eq!(expected, buf.as_ref());
-	}
-
-	#[test]
-	fn test_aes_256_enc() {
-		let plaintext = decode("00112233445566778899aabbccddeeff");
-		let key = decode("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
-		let expected = decode("8ea2b7ca516745bfeafc49904b496089");
-
-		let mut buf = [0;AES_BLOCKSIZE];
-
-		for (i, element) in plaintext.into_iter().enumerate() {
-			buf[i] = element;
-		}
-
-		let aes = Aes::new(&key);
-		aes.encrypt(&mut buf, None, None);
-
-		assert_eq!(expected, buf.as_ref());
-	}
-
-	#[test]
 	fn test_sub_bytes_dec() {
 
 		let mut state = decode("7a9f102789d5f50b2beffd9f3dca4ea7");
@@ -665,23 +611,5 @@ mod tests {
 		let expected = decode("4773b91ff72f354361cb018ea1e6cf2c");
 		mix_columns_dec(&mut state);
 		assert_eq!(expected, state);
-	}
-
-	#[test]
-	fn test_aes_128_dec() {
-		let plaintext = decode("69c4e0d86a7b0430d8cdb78070b4c55a");
-		let key = decode("000102030405060708090a0b0c0d0e0f");
-		let expected = decode("00112233445566778899aabbccddeeff");
-
-		let mut buf = [0;AES_BLOCKSIZE];
-
-		for (i, element) in plaintext.into_iter().enumerate() {
-			buf[i] = element;
-		}
-
-		let aes = Aes::new(&key);
-		aes.decrypt(&mut buf, None, None);
-
-		assert_eq!(expected, buf.as_ref());
 	}
 }
