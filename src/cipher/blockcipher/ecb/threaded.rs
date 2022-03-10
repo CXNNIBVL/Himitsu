@@ -41,8 +41,9 @@ impl<T, const B: usize> ThreadedEcbEncryption<T, B>
     /// Resets the cipher and returns a Readable, containing the processed contents
     pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
 
-        if self.buffer.is_full() { self.process_buffer(); }
-        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock(self.buffer.capacity()) ) }
+        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock(self.buffer.capacity()) ) }
+
+        self.process_buffer();
 
         let out = self.primitive.finalize();
         Ok( Readable::new(out) )
@@ -100,8 +101,8 @@ impl<T, const B: usize> ThreadedEcbDecryption<T, B>
     /// Resets the cipher and returns a Readable, containing the processed contents
     pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
 
-        if self.buffer.is_full() { self.process_buffer(); }
-        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock(self.buffer.capacity()) ) }
+        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock(self.buffer.capacity()) ) }
+        self.process_buffer();
 
         let out = self.primitive.finalize();
         Ok( Readable::new(out) )

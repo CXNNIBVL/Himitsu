@@ -47,13 +47,11 @@ impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryption<T, B> {
         self.out.extend(encrypted);
     }
 
-    /// Resets the cipher and returns a Readable with the processed contents
+    /// Returns a Readable with the processed contents
     pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
 
-        // If the last block is complete then encrypt
-        if self.buffer.is_full() { self.process_final(); }
-        // Else return error with number of missing bytes
-        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
+        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
+        self.process_final();
 
         // Replace out with a fresh vec and return a readable with the contents of out
         Ok( Readable::new( mem::replace(&mut self.out, Vec::new()) ))
@@ -139,10 +137,8 @@ impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
     /// Resets the cipher and returns a Readable with the processed contents
     pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
 
-        // If the last block is complete then encrypt
-        if self.buffer.is_full() { self.process_final(); }
-        // Else return error with number of missing bytes
-        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
+        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
+        self.process_final();
 
         // Replace out with a fresh vec and return a readable with the contents of out
         Ok( Readable::new( mem::replace(&mut self.out, Vec::new()) ))

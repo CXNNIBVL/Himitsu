@@ -32,10 +32,8 @@ impl<T: PrimitiveEncryption<B>, const B: usize> EcbEncryption<T, B> {
 
     fn process_buffer(&mut self) {
 
-        // Encrypt the buffer
         self.primitive.encrypt(self.buffer.as_mut(), None, None);
 
-        // Extract the encrypted buffer and replace it with a fresh one
         let encrypted = mem::replace(&mut self.buffer, FixedBuffer::new());
 
         // Append the extracted buffer to out
@@ -44,11 +42,9 @@ impl<T: PrimitiveEncryption<B>, const B: usize> EcbEncryption<T, B> {
 
     /// Resets the cipher and returns a Readable with the processed contents
     pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-
-        // If the last block is complete then encrypt, else return error with number of missing bytes
-        if self.buffer.is_full() { self.process_buffer(); }
        
-        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
+        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
+        self.process_buffer();
 
         // Replace out with a fresh vec and return a readable with the contents of out
         Ok( Readable::new( mem::replace(&mut self.out, Vec::new()) ))
@@ -99,22 +95,19 @@ impl<T: PrimitiveDecryption<B>, const B: usize> EcbDecryption<T, B> {
 
     fn process_buffer(&mut self) {
 
-        // Encrypt the buffer
         self.primitive.decrypt(self.buffer.as_mut(), None, None);
 
-        // Extract the encrypted buffer and replace it with a fresh one
         let decrypted = mem::replace(&mut self.buffer, FixedBuffer::new());
 
-        // Append the extracted buffer to out
         self.out.extend(decrypted);
     }
 
     /// Resets the cipher and returns a Readable with the processed contents
     pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-        // If the last block is complete then encrypt, else return error with number of missing bytes
-        if self.buffer.is_full() { self.process_buffer(); }
+        // If the last block is complete then process, else return error with number of missing bytes
+        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
     
-        else if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
+        self.process_buffer();
 
         // Replace out with a fresh vec and return a readable with the contents of out
         Ok( Readable::new( std::mem::replace(&mut self.out, Vec::new()) ))
