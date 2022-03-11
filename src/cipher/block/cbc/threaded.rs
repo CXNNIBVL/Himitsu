@@ -2,7 +2,7 @@
 use std::io;
 use std::mem;
 use crate::traits::cipher::BlockCipherPrimitiveDecryption as PrimitiveDecryption;
-use crate::cipher::blockcipher::primitive::threaded::ThreadedCipherDecryption as ThreadedDecryption;
+use crate::cipher::block::primitive::threaded::ThreadedCipherDecryption as ThreadedDecryption;
 use crate::util::{
     buffer::FixedBuffer,
     readable::Readable

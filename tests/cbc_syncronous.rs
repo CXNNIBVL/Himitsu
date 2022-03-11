@@ -5,7 +5,7 @@ mod common;
 mod tests {
 
     use std::io::{Read, Write};
-    use himitsu::cipher::blockcipher::primitive::aes;
+    use himitsu::cipher::block::primitive::aes;
     use himitsu::traits::cipher::*;
     use super::common::decode;
 

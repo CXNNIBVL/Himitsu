@@ -3,7 +3,7 @@ use crate::traits::cipher::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption
 };
 
-use crate::cipher::blockcipher::cbc::{CbcEncryption, CbcDecryption, ThreadedCbcDecryption};
+use crate::cipher::block::cbc::{CbcEncryption, CbcDecryption, ThreadedCbcDecryption};
 
 pub trait WithCbcEncryption<const BLOCKSIZE: usize> {
     type Primitive: PrimitiveEncryption<BLOCKSIZE>;

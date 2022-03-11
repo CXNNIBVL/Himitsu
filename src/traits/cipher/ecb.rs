@@ -1,4 +1,4 @@
-use crate::cipher::blockcipher::ecb::{EcbEncryption, EcbDecryption, ThreadedEcbEncryption, ThreadedEcbDecryption};
+use crate::cipher::block::ecb::{EcbEncryption, EcbDecryption, ThreadedEcbEncryption, ThreadedEcbDecryption};
 use crate::traits::cipher::{
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
     BlockCipherPrimitiveDecryption as PrimitiveDecryption

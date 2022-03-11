@@ -5,7 +5,7 @@ use crate::traits::cipher::{
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
     BlockCipherPrimitiveDecryption as PrimitiveDecryption
 };
-use crate::cipher::blockcipher::primitive::threaded::{
+use crate::cipher::block::primitive::threaded::{
     ThreadedCipherEncryption as ThreadedEncryption,
     ThreadedCipherDecryption as ThreadedDecryption
 };

@@ -1,6 +1,6 @@
-mod blockcipher_primitive;
+mod block;
 mod ecb;
 mod cbc;
-pub use blockcipher_primitive::*;
+pub use block::*;
 pub use ecb::*;
 pub use cbc::*;
