@@ -58,18 +58,15 @@ impl<T, const B: usize> ThreadedCbcDecryption<T, B>
         Ok( Readable::new( self.primitive.finalize() ))
     }
 
-    /// Resets the cipher, as well as the underlying IV and returns a Readable with the processed contents
-    pub fn finalize_with_iv(&mut self, iv: &[u8]) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-
-        let out = self.finalize();
-
+    /// Resets the cipher
+    pub fn reset(&mut self, iv: &[u8]) {
+        self.buffer = FixedBuffer::new();
+        
         self.iv = {
             let mut new_iv = FixedBuffer::new();
             new_iv.push_slice(iv);
             new_iv
         };
-
-        out
     }
 }
 

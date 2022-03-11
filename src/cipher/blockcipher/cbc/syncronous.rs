@@ -57,18 +57,15 @@ impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryption<T, B> {
         Ok( Readable::new( mem::replace(&mut self.out, Vec::new()) ))
     }
 
-    /// Resets the cipher, as well as the underlying IV and returns a Readable with the processed contents
-    pub fn finalize_with_iv(&mut self, iv: &[u8]) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-
-        let out = self.finalize();
-
+    /// Resets the cipher
+    pub fn reset(&mut self, iv: &[u8]) {
+        self.buffer = FixedBuffer::new();
+        self.out = Vec::new();
         self.iv = {
             let mut new_iv = FixedBuffer::new();
             new_iv.push_slice(iv);
             new_iv
         };
-
-        out
     }
 }
 
@@ -134,7 +131,7 @@ impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
         self.out.extend(decrypted);
     }
 
-    /// Resets the cipher and returns a Readable with the processed contents
+    /// Returns a Readable with the processed contents
     pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
 
         if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
@@ -144,18 +141,15 @@ impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
         Ok( Readable::new( mem::replace(&mut self.out, Vec::new()) ))
     }
 
-    /// Resets the cipher, as well as the underlying IV and returns a Readable with the processed contents
-    pub fn finalize_with_iv(&mut self, iv: &[u8]) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-
-        let out = self.finalize();
-
+    /// Resets the cipher
+    pub fn reset(&mut self, iv: &[u8]) {
+        self.buffer = FixedBuffer::new();
+        self.out = Vec::new();
         self.iv = {
             let mut new_iv = FixedBuffer::new();
             new_iv.push_slice(iv);
             new_iv
         };
-
-        out
     }
 }
 
