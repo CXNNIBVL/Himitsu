@@ -31,7 +31,7 @@ mod tests {
                 let mut cipher = <$cipher>::new(&key).with_cbc_encryption(&iv);
                 cipher.write_all(&input).unwrap();
 
-                let mut reader = cipher.finalize().unwrap();
+                let mut reader = cipher.finalize();
 
                 let mut output = Vec::new();
                 reader.read_to_end(&mut output).unwrap();
@@ -64,7 +64,7 @@ mod tests {
                 let mut cipher = <$cipher>::new(&key).with_cbc_decryption(&iv);
                 cipher.write_all(&input).unwrap();
 
-                let mut reader = cipher.finalize().unwrap();
+                let mut reader = cipher.finalize();
 
                 let mut output = Vec::new();
                 reader.read_to_end(&mut output).unwrap();

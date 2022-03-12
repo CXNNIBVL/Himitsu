@@ -38,15 +38,9 @@ impl<T, const B: usize> ThreadedEcbEncryption<T, B>
         self.primitive.put(mut_block.into(), None, None);
     }
 
-    /// Resets the cipher and returns a Readable, containing the processed contents
-    pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-
-        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock(self.buffer.capacity()) ) }
-
-        self.process_buffer();
-
-        let out = self.primitive.finalize();
-        Ok( Readable::new(out) )
+    /// Consumes the cipher, ignoring any buffered bytes and returns a Readable with the processed contents
+    pub fn finalize(mut self) -> Readable<Vec<u8>> {
+        Readable::new(self.primitive.finalize())
     }
 }
 
@@ -59,15 +53,20 @@ impl<T, const B: usize> io::Write for ThreadedEcbEncryption<T,B>
         // Push buf until all contents have been written, if necessary, then encrypt buffer
         while written < buf.len() {
 
-            if self.buffer.is_full() { self.process_buffer(); }
-
             written += self.buffer.push_slice(&buf[written..]);
+
+            if self.buffer.is_full() { self.process_buffer(); }
         }
 
         Ok(written)
     }
 
     fn flush(&mut self) -> io::Result<()> {
+        use io::ErrorKind;
+        if !self.buffer.is_full() {
+            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
+        }
+
         Ok(())
     }
 }
@@ -98,14 +97,9 @@ impl<T, const B: usize> ThreadedEcbDecryption<T, B>
         self.primitive.put(mut_block.into(), None, None);
     }
 
-    /// Resets the cipher and returns a Readable, containing the processed contents
-    pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-
-        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock(self.buffer.capacity()) ) }
-        self.process_buffer();
-
-        let out = self.primitive.finalize();
-        Ok( Readable::new(out) )
+    /// Consumes the cipher, ignoring any buffered bytes and returns a Readable with the processed contents
+    pub fn finalize(mut self) -> Readable<Vec<u8>> {
+        Readable::new(self.primitive.finalize())
     }
 }
 
@@ -118,15 +112,20 @@ impl<T, const B: usize> io::Write for ThreadedEcbDecryption<T,B>
         // Push buf until all contents have been written, if necessary, then encrypt buffer
         while written < buf.len() {
 
-            if self.buffer.is_full() { self.process_buffer(); }
-
             written += self.buffer.push_slice(&buf[written..]);
+
+            if self.buffer.is_full() { self.process_buffer(); }
         }
 
         Ok(written)
     }
 
     fn flush(&mut self) -> io::Result<()> {
+        use io::ErrorKind;
+        if !self.buffer.is_full() {
+            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
+        }
+
         Ok(())
     }
 }

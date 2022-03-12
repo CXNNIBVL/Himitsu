@@ -28,7 +28,7 @@ mod tests {
                 
                 let mut cipher = <$primitive>::new(&key).with_ecb_encryption();
                 cipher.write_all(&input).unwrap();
-                let mut reader = cipher.finalize().unwrap();
+                let mut reader = cipher.finalize();
                 reader.read_to_end(&mut output).unwrap();
 
                 assert_eq!(expected, output);
@@ -56,7 +56,7 @@ mod tests {
                 
                 let mut cipher = <$primitive>::new(&key).with_ecb_decryption();
                 cipher.write_all(&input).unwrap();
-                let mut reader = cipher.finalize().unwrap();
+                let mut reader = cipher.finalize();
                 reader.read_to_end(&mut output).unwrap();
 
                 assert_eq!(expected, output);

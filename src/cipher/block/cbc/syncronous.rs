@@ -40,32 +40,9 @@ impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryption<T, B> {
         self.out.extend(encrypted);
     }
 
-    fn process_final(&mut self) {
-        self.primitive.encrypt(self.buffer.as_mut(), Some(self.iv.as_ref()), None);
-        let encrypted = mem::replace(&mut self.buffer, FixedBuffer::new());
-        
-        self.out.extend(encrypted);
-    }
-
     /// Returns a Readable with the processed contents
-    pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-
-        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
-        self.process_final();
-
-        // Replace out with a fresh vec and return a readable with the contents of out
-        Ok( Readable::new( mem::replace(&mut self.out, Vec::new()) ))
-    }
-
-    /// Resets the cipher
-    pub fn reset(&mut self, iv: &[u8]) {
-        self.buffer = FixedBuffer::new();
-        self.out = Vec::new();
-        self.iv = {
-            let mut new_iv = FixedBuffer::new();
-            new_iv.push_slice(iv);
-            new_iv
-        };
+    pub fn finalize(self) -> Readable<Vec<u8>> {
+        Readable::new(self.out)
     }
 }
 
@@ -77,15 +54,20 @@ impl<T: PrimitiveEncryption<B>, const B: usize> io::Write for CbcEncryption<T, B
         // Push buf until all contents have been written, if necessary, then encrypt buffer
         while written < buf.len() {
 
-            if self.buffer.is_full() { self.process_buffer(); }
-
             written += self.buffer.push_slice(&buf[written..]);
+
+            if self.buffer.is_full() { self.process_buffer(); }
         }
 
         Ok(written)
     }
 
     fn flush(&mut self) -> io::Result<()> {
+        use io::ErrorKind;
+        if !self.buffer.is_full() {
+            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
+        }
+
         Ok(())
     }
     
@@ -123,33 +105,9 @@ impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
         self.out.extend(decrypted);
     }
 
-    fn process_final(&mut self) {
-        
-        self.primitive.decrypt(self.buffer.as_mut(), None, Some(self.iv.as_ref()));
-        let decrypted = mem::replace(&mut self.buffer, FixedBuffer::new());
-        
-        self.out.extend(decrypted);
-    }
-
     /// Returns a Readable with the processed contents
-    pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-
-        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
-        self.process_final();
-
-        // Replace out with a fresh vec and return a readable with the contents of out
-        Ok( Readable::new( mem::replace(&mut self.out, Vec::new()) ))
-    }
-
-    /// Resets the cipher
-    pub fn reset(&mut self, iv: &[u8]) {
-        self.buffer = FixedBuffer::new();
-        self.out = Vec::new();
-        self.iv = {
-            let mut new_iv = FixedBuffer::new();
-            new_iv.push_slice(iv);
-            new_iv
-        };
+    pub fn finalize(self) -> Readable<Vec<u8>> {
+        Readable::new(self.out)
     }
 }
 
@@ -161,15 +119,20 @@ impl<T: PrimitiveDecryption<B>, const B: usize> io::Write for CbcDecryption<T, B
         // Push buf until all contents have been written, if necessary, then encrypt buffer
         while written < buf.len() {
 
-            if self.buffer.is_full() { self.process_buffer(); }
-
             written += self.buffer.push_slice(&buf[written..]);
+
+            if self.buffer.is_full() { self.process_buffer(); }
         }
 
         Ok(written)
     }
 
     fn flush(&mut self) -> io::Result<()> {
+        use io::ErrorKind;
+        if !self.buffer.is_full() {
+            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
+        }
+
         Ok(())
     }
     

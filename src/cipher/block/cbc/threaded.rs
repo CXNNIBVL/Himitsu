@@ -41,33 +41,10 @@ impl<T, const B: usize> ThreadedCbcDecryption<T, B>
         self.primitive.put(buf.into(), None, Some(iv.into()));
     }
 
-    fn process_final(&mut self) {
-        let buf = mem::replace(&mut self.buffer, FixedBuffer::new());
-        let iv = mem::replace(&mut self.iv, FixedBuffer::new());
-
-        self.primitive.put(buf.into(), None, Some(iv.into()));
-    }
-
-    /// Resets the cipher and returns a Readable with the processed contents
-    pub fn finalize(&mut self) -> Result<Readable<Vec<u8>>, BlockCipherError> {
-
-        if !self.buffer.is_full() { return Err( BlockCipherError::IncompleteBlock( self.buffer.capacity() ) ) }
-        self.process_final();
-
-        // Replace out with a fresh vec and return a readable with the contents of out
-        Ok( Readable::new( self.primitive.finalize() ))
-    }
-
-    /// Resets the cipher
-    pub fn reset(&mut self, iv: &[u8]) {
-        self.buffer = FixedBuffer::new();
-        
-        self.iv = {
-            let mut new_iv = FixedBuffer::new();
-            new_iv.push_slice(iv);
-            new_iv
-        };
-    }
+    /// Returns a Readable with the processed contents
+    pub fn finalize(mut self) -> Readable<Vec<u8>> {
+        Readable::new(self.primitive.finalize())
+    } 
 }
 
 impl<T, const B: usize> io::Write for ThreadedCbcDecryption<T, B> 
@@ -79,15 +56,20 @@ impl<T, const B: usize> io::Write for ThreadedCbcDecryption<T, B>
         // Push buf until all contents have been written, if necessary, then encrypt buffer
         while written < buf.len() {
 
-            if self.buffer.is_full() { self.process_buffer(); }
-
             written += self.buffer.push_slice(&buf[written..]);
+            
+            if self.buffer.is_full() { self.process_buffer(); }
         }
 
         Ok(written)
     }
 
     fn flush(&mut self) -> io::Result<()> {
+        use io::ErrorKind;
+        if !self.buffer.is_full() {
+            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
+        }
+
         Ok(())
     }
     
