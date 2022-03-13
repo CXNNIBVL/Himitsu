@@ -1,7 +1,11 @@
 
 use std::io;
 use std::mem;
-use crate::traits::cipher::BlockCipherPrimitiveDecryption as PrimitiveDecryption;
+use crate::traits::cipher::{
+    BlockCipherPrimitiveDecryption as PrimitiveDecryption,
+    BlockCipherInfo,
+    BlockCipherDecryption
+};
 use crate::cipher::block::primitive::threaded::ThreadedCipherDecryption as ThreadedDecryption;
 use crate::util::{
     buffer::FixedBuffer,
@@ -15,6 +19,14 @@ pub struct ThreadedCbcDecryption<T, const BLOCKSIZE: usize>
     primitive: ThreadedDecryption<T, BLOCKSIZE>,
     buffer: FixedBuffer<u8, BLOCKSIZE>,
     iv: FixedBuffer<u8, BLOCKSIZE>,
+}
+
+impl<T, const B: usize> BlockCipherInfo for ThreadedCbcDecryption<T,B> 
+    where T: PrimitiveDecryption<B> + Send + Sync + 'static
+{
+    const BLOCKSIZE: usize = T::BLOCKSIZE;
+    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
+    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
 }
 
 impl<T, const B: usize> ThreadedCbcDecryption<T, B> 
@@ -40,9 +52,15 @@ impl<T, const B: usize> ThreadedCbcDecryption<T, B>
 
         self.primitive.put(buf.into(), None, Some(iv.into()));
     }
+}
+
+impl<T, const B: usize> BlockCipherDecryption<B> for ThreadedCbcDecryption<T, B> 
+    where T: PrimitiveDecryption<B> + Send + Sync + 'static
+{
+    type Output = Vec<u8>;
 
     /// Returns a Readable with the processed contents
-    pub fn finalize(mut self) -> Readable<Vec<u8>> {
+    fn finalize(mut self) -> Readable<Vec<u8>> {
         Readable::new(self.primitive.finalize())
     } 
 }

@@ -8,6 +8,9 @@ use crate::util::{
 use crate::traits::cipher::{ 
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
+    BlockCipherInfo,
+    BlockCipherEncryption,
+    BlockCipherDecryption
 };
 
 /// ECB encryption provider
@@ -17,6 +20,12 @@ pub struct EcbEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usi
     primitive: T,
     buffer: FixedBuffer<u8, BLOCKSIZE>,
     out: Vec<u8>
+}
+
+impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherInfo for EcbEncryption<T, B> {
+    const BLOCKSIZE: usize = T::BLOCKSIZE;
+    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
+    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> EcbEncryption<T, B> {
@@ -39,9 +48,12 @@ impl<T: PrimitiveEncryption<B>, const B: usize> EcbEncryption<T, B> {
         // Append the extracted buffer to out
         self.out.extend(encrypted);
     }
+}
 
+impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherEncryption<B> for EcbEncryption<T, B> {
+    type Output = Vec<u8>;
     /// Consumes the cipher, ignoring any buffered bytes and returns a Readable with the processed contents
-    pub fn finalize(self) -> Readable<Vec<u8>> {
+    fn finalize(self) -> Readable<Vec<u8>> {
         Readable::new( self.out)
     }
 }
@@ -82,6 +94,12 @@ pub struct EcbDecryption<T: PrimitiveDecryption<BLOCKSIZE>, const BLOCKSIZE: usi
     out: Vec<u8>
 }
 
+impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherInfo for EcbDecryption<T, B> {
+    const BLOCKSIZE: usize = T::BLOCKSIZE;
+    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
+    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
+}
+
 impl<T: PrimitiveDecryption<B>, const B: usize> EcbDecryption<T, B> {
 
     /// Create a new instance from a Cipher primitive
@@ -101,9 +119,12 @@ impl<T: PrimitiveDecryption<B>, const B: usize> EcbDecryption<T, B> {
 
         self.out.extend(decrypted);
     }
+}
 
+impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherDecryption<B> for EcbDecryption<T, B> {
+    type Output = Vec<u8>;
     /// Consumes the cipher, ignoring any buffered bytes and returns a Readable with the processed contents
-    pub fn finalize(self) -> Readable<Vec<u8>> {
+    fn finalize(self) -> Readable<Vec<u8>> {
         Readable::new( self.out)
     }
 }

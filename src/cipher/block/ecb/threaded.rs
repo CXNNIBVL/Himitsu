@@ -3,7 +3,10 @@ use std::mem;
 use std::io;
 use crate::traits::cipher::{
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
-    BlockCipherPrimitiveDecryption as PrimitiveDecryption
+    BlockCipherPrimitiveDecryption as PrimitiveDecryption,
+    BlockCipherInfo,
+    BlockCipherEncryption,
+    BlockCipherDecryption
 };
 use crate::cipher::block::primitive::threaded::{
     ThreadedCipherEncryption as ThreadedEncryption,
@@ -22,6 +25,14 @@ pub struct ThreadedEcbEncryption<T, const BLOCKSIZE: usize>
     buffer: FixedBuffer<u8, BLOCKSIZE>
 }
 
+impl<T, const B: usize> BlockCipherInfo for ThreadedEcbEncryption<T, B> 
+    where T: PrimitiveEncryption<B> + Send + Sync + 'static
+{
+    const BLOCKSIZE: usize = T::BLOCKSIZE;
+    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
+    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
+}
+
 impl<T, const B: usize> ThreadedEcbEncryption<T, B> 
     where T: PrimitiveEncryption<B> + Send + Sync + 'static
 {
@@ -37,9 +48,14 @@ impl<T, const B: usize> ThreadedEcbEncryption<T, B>
         let mut_block = mem::replace(&mut self.buffer, FixedBuffer::new());
         self.primitive.put(mut_block.into(), None, None);
     }
+}
 
+impl<T, const B: usize> BlockCipherEncryption<B> for ThreadedEcbEncryption<T, B> 
+    where T: PrimitiveEncryption<B> + Send + Sync + 'static 
+{
+    type Output = Vec<u8>;
     /// Consumes the cipher, ignoring any buffered bytes and returns a Readable with the processed contents
-    pub fn finalize(mut self) -> Readable<Vec<u8>> {
+    fn finalize(mut self) -> Readable<Vec<u8>> {
         Readable::new(self.primitive.finalize())
     }
 }
@@ -80,6 +96,14 @@ pub struct ThreadedEcbDecryption<T, const BLOCKSIZE: usize>
     buffer: FixedBuffer<u8, BLOCKSIZE>
 }
 
+impl<T, const B: usize> BlockCipherInfo for ThreadedEcbDecryption<T, B>
+    where T: PrimitiveDecryption<B> + Send + Sync + 'static
+{
+    const BLOCKSIZE: usize = T::BLOCKSIZE;
+    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
+    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
+}
+
 impl<T, const B: usize> ThreadedEcbDecryption<T, B> 
     where T: PrimitiveDecryption<B> + Send + Sync + 'static
 {
@@ -96,9 +120,14 @@ impl<T, const B: usize> ThreadedEcbDecryption<T, B>
         let mut_block = mem::replace(&mut self.buffer, FixedBuffer::new());
         self.primitive.put(mut_block.into(), None, None);
     }
+}
 
+impl<T, const B: usize> BlockCipherDecryption<B> for ThreadedEcbDecryption<T, B>
+    where T: PrimitiveDecryption<B> + Send + Sync + 'static
+{
+    type Output = Vec<u8>;
     /// Consumes the cipher, ignoring any buffered bytes and returns a Readable with the processed contents
-    pub fn finalize(mut self) -> Readable<Vec<u8>> {
+    fn finalize(mut self) -> Readable<Vec<u8>> {
         Readable::new(self.primitive.finalize())
     }
 }

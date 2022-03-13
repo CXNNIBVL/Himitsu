@@ -319,7 +319,7 @@ fn key_expansion(key: &[u8]) -> (Vec<u8>, usize) {
 		let mut tmp = [0u8;4];
 		tmp.copy_from_slice(&expanded_key[expanded_key.len() - 4..]);
 
-		if 	expanded_key.len() % 16 == 0 && expanded_key.len() % 32 != 0 && capacity == 15 * AES_BLOCKSIZE {
+		if expanded_key.len() % 16 == 0 && expanded_key.len() % 32 != 0 && capacity == 15 * AES_BLOCKSIZE {
 			key_expansion_gcon(&mut tmp);
 		}
 

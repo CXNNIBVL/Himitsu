@@ -8,6 +8,9 @@ use crate::util::{
 use crate::traits::cipher::{ 
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
+    BlockCipherEncryption,
+    BlockCipherDecryption,
+    BlockCipherInfo
 };
 
 /// CBC Encryption Provider
@@ -16,6 +19,12 @@ pub struct CbcEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usi
     buffer: FixedBuffer<u8, BLOCKSIZE>,
     iv: FixedBuffer<u8, BLOCKSIZE>,
     out: Vec<u8>
+}
+
+impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherInfo for CbcEncryption<T, B> {
+    const BLOCKSIZE: usize = T::BLOCKSIZE;
+    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
+    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryption<T, B> {
@@ -39,9 +48,14 @@ impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryption<T, B> {
         self.iv.override_contents(encrypted.as_ref(), encrypted.len());
         self.out.extend(encrypted);
     }
+}
+
+impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherEncryption<B> for CbcEncryption<T, B> {
+
+    type Output = Vec<u8>;
 
     /// Returns a Readable with the processed contents
-    pub fn finalize(self) -> Readable<Vec<u8>> {
+    fn finalize(self) -> Readable<Self::Output> {
         Readable::new(self.out)
     }
 }
@@ -81,6 +95,12 @@ pub struct CbcDecryption<T: PrimitiveDecryption<BLOCKSIZE>, const BLOCKSIZE: usi
     out: Vec<u8>
 }
 
+impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherInfo for CbcDecryption<T, B> {
+    const BLOCKSIZE: usize = T::BLOCKSIZE;
+    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
+    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
+}
+
 impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
 
     pub fn new(primitive: T, iv: &[u8]) -> Self {
@@ -104,9 +124,12 @@ impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
         
         self.out.extend(decrypted);
     }
+}
 
+impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherDecryption<B> for CbcDecryption<T, B> {
+    type Output = Vec<u8>;
     /// Returns a Readable with the processed contents
-    pub fn finalize(self) -> Readable<Vec<u8>> {
+    fn finalize(self) -> Readable<Self::Output> {
         Readable::new(self.out)
     }
 }
