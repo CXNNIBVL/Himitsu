@@ -3,15 +3,13 @@ use std::io;
 use std::mem;
 use crate::traits::cipher::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
-    BlockCipherInfo,
-    BlockCipherDecryption
+    BlockCipherInfo
 };
 use crate::cipher::block::primitive::threaded::ThreadedCipherDecryption as ThreadedDecryption;
 use crate::util::{
     buffer::FixedBuffer,
     readable::Readable
 };
-use crate::errors::blockcipher::BlockCipherError;
 
 pub struct ThreadedCbcDecryption<T, const BLOCKSIZE: usize> 
     where T: PrimitiveDecryption<BLOCKSIZE> + Send + Sync + 'static
@@ -50,17 +48,19 @@ impl<T, const B: usize> ThreadedCbcDecryption<T, B>
 
         self.primitive.put(buf.into(), None, Some(iv.into()));
     }
-}
 
-impl<T, const B: usize> BlockCipherDecryption<B> for ThreadedCbcDecryption<T, B> 
-    where T: PrimitiveDecryption<B> + Send + Sync + 'static
-{
-    type Output = Vec<u8>;
+    pub fn missing(&self) -> Option<usize> {
+        if !self.buffer.is_full() && !self.buffer.is_empty() {
+            return Some(self.buffer.capacity());
+        }
+
+        None
+    }
 
     /// Returns a Readable with the processed contents
-    fn finalize(mut self) -> Readable<Vec<u8>> {
+    pub fn finalize(mut self) -> Readable<Vec<u8>> {
         Readable::new(self.primitive.finalize())
-    } 
+    }
 }
 
 impl<T, const B: usize> io::Write for ThreadedCbcDecryption<T, B> 
@@ -81,11 +81,6 @@ impl<T, const B: usize> io::Write for ThreadedCbcDecryption<T, B>
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        use io::ErrorKind;
-        if !self.buffer.is_full() && self.buffer.capacity() != B {
-            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
-        }
-
         Ok(())
     }
     
