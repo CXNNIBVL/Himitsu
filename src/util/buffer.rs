@@ -64,6 +64,7 @@ impl<T, const B: usize> FixedBuffer<T, B>
 
     /// Returns a bool indicating whether the buffer is filled
     pub fn is_full(&self) -> bool { self.capacity() == 0 }
+    pub fn is_empty(&self) -> bool { self.capacity() == B }
 
     /// Provides fast overriding of the buffers elements.
     /// This does not update the buffers capacity, so this function should only be called
@@ -164,6 +165,12 @@ impl<T: Clone + Copy + Default, const B: usize> From<[T;B]> for FixedBuffer<T, B
 
 impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a [T;B]> for FixedBuffer<T, B> {
     fn from(buf: &'a [T;B]) -> Self {
+        Self { buf: buf.clone(), capacity: 0}
+    }
+}
+
+impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a mut [T;B]> for FixedBuffer<T, B> {
+    fn from(buf: &'a mut [T;B]) -> Self {
         Self { buf: buf.clone(), capacity: 0}
     }
 }

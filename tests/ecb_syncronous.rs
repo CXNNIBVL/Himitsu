@@ -26,7 +26,7 @@ mod tests {
                 let expected = decode($expected);
                 let mut output = Vec::new();
                 
-                let mut cipher = <$primitive>::new(&key).with_ecb_encryption();
+                let mut cipher = <$primitive>::new(&key).with_ecb_encryption().buffered();
                 cipher.write_all(&input).unwrap();
                 let mut reader = cipher.finalize();
                 reader.read_to_end(&mut output).unwrap();
@@ -54,7 +54,7 @@ mod tests {
                 let expected = decode($expected);
                 let mut output = Vec::new();
                 
-                let mut cipher = <$primitive>::new(&key).with_ecb_decryption();
+                let mut cipher = <$primitive>::new(&key).with_ecb_decryption().buffered();
                 cipher.write_all(&input).unwrap();
                 let mut reader = cipher.finalize();
                 reader.read_to_end(&mut output).unwrap();

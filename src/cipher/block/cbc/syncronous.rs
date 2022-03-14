@@ -1,10 +1,5 @@
-use std::io;
-use std::mem;
-use crate::errors::blockcipher::BlockCipherError;
-use crate::util::{
-    readable::Readable,
-    buffer::FixedBuffer
-};
+
+use crate::util::buffer::FixedBuffer;
 use crate::traits::cipher::{ 
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
@@ -16,9 +11,7 @@ use crate::traits::cipher::{
 /// CBC Encryption Provider
 pub struct CbcEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     primitive: T,
-    buffer: FixedBuffer<u8, BLOCKSIZE>,
     iv: FixedBuffer<u8, BLOCKSIZE>,
-    out: Vec<u8>
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherInfo for CbcEncryption<T, B> {
@@ -31,66 +24,24 @@ impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryption<T, B> {
     /// Up to the primitives blocksize of IV contents will be used.
     pub fn new(primitive: T, iv: &[u8]) -> Self {
 
-        let ( buffer, mut iv_buf ) = ( FixedBuffer::new(), FixedBuffer::new() );
+        let mut iv_buf = FixedBuffer::new();
         iv_buf.push_slice(iv);
-
-        let out = Vec::new();
         
-        Self { primitive, buffer, iv: iv_buf, out }
-    }
-
-    fn process_buffer(&mut self) {
-        self.primitive.encrypt(self.buffer.as_mut(), Some(self.iv.as_ref()), None);
-        let encrypted = mem::replace(&mut self.buffer, FixedBuffer::new());
-        
-        self.iv.override_contents(encrypted.as_ref(), encrypted.len());
-        self.out.extend(encrypted);
+        Self { primitive, iv: iv_buf}
     }
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherEncryption<B> for CbcEncryption<T, B> {
-
-    type Output = Vec<u8>;
-
-    /// Returns a Readable with the processed contents
-    fn finalize(self) -> Readable<Self::Output> {
-        Readable::new(self.out)
+    fn encrypt(&mut self, data: &mut [u8;B]) {
+        self.primitive.encrypt(data, Some(self.iv.as_ref()), None);
+        self.iv.override_contents(data.as_slice(), data.len());
     }
-}
-
-impl<T: PrimitiveEncryption<B>, const B: usize> io::Write for CbcEncryption<T, B> {
-
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let mut written = 0;
-
-        // Push buf until all contents have been written, if necessary, then encrypt buffer
-        while written < buf.len() {
-
-            written += self.buffer.push_slice(&buf[written..]);
-
-            if self.buffer.is_full() { self.process_buffer(); }
-        }
-
-        Ok(written)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        use io::ErrorKind;
-        if !self.buffer.is_full() && self.buffer.capacity() != B {
-            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
-        }
-
-        Ok(())
-    }
-    
 }
 
 
 pub struct CbcDecryption<T: PrimitiveDecryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     primitive: T,
-    buffer: FixedBuffer<u8, BLOCKSIZE>,
     iv: FixedBuffer<u8, BLOCKSIZE>,
-    out: Vec<u8>
 }
 
 impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherInfo for CbcDecryption<T, B> {
@@ -101,58 +52,18 @@ impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
 
     pub fn new(primitive: T, iv: &[u8]) -> Self {
 
-        let ( buffer, mut iv_buf ) = ( FixedBuffer::new(), FixedBuffer::new() );
+        let mut iv_buf = FixedBuffer::new();
         iv_buf.push_slice(iv);
-
-        let out = Vec::new();
         
-        Self { primitive, buffer, iv: iv_buf, out}
-    }
-
-    fn process_buffer(&mut self) {
-
-        let new_iv = FixedBuffer::from(self.buffer.as_ref()); 
-    
-        self.primitive.decrypt(self.buffer.as_mut(), None, Some(self.iv.as_ref()));
-        let decrypted = mem::replace(&mut self.buffer, FixedBuffer::new());
-
-        self.iv = new_iv;
-        
-        self.out.extend(decrypted);
+        Self { primitive, iv: iv_buf}
     }
 }
 
 impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherDecryption<B> for CbcDecryption<T, B> {
-    type Output = Vec<u8>;
-    /// Returns a Readable with the processed contents
-    fn finalize(self) -> Readable<Self::Output> {
-        Readable::new(self.out)
+    fn decrypt(&mut self, data: &mut [u8;B]) {
+        let mut new_iv = FixedBuffer::new();
+        new_iv.push_slice(data); 
+        self.primitive.decrypt(data, None, Some(self.iv.as_ref()));
+        self.iv = new_iv;
     }
-}
-
-impl<T: PrimitiveDecryption<B>, const B: usize> io::Write for CbcDecryption<T, B> {
-
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let mut written = 0;
-
-        // Push buf until all contents have been written, if necessary, then encrypt buffer
-        while written < buf.len() {
-
-            written += self.buffer.push_slice(&buf[written..]);
-
-            if self.buffer.is_full() { self.process_buffer(); }
-        }
-
-        Ok(written)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        use io::ErrorKind;
-        if !self.buffer.is_full() && self.buffer.capacity() != B {
-            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
-        }
-
-        Ok(())
-    }
-    
 }

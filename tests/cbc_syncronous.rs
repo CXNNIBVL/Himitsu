@@ -28,7 +28,7 @@ mod tests {
                 let iv = decode($iv);
                 let expected = decode($expected);
 
-                let mut cipher = <$cipher>::new(&key).with_cbc_encryption(&iv);
+                let mut cipher = <$cipher>::new(&key).with_cbc_encryption(&iv).buffered();
                 cipher.write_all(&input).unwrap();
 
                 let mut reader = cipher.finalize();
@@ -61,7 +61,7 @@ mod tests {
                 let iv = decode($iv);
                 let expected = decode($expected);
 
-                let mut cipher = <$cipher>::new(&key).with_cbc_decryption(&iv);
+                let mut cipher = <$cipher>::new(&key).with_cbc_decryption(&iv).buffered();
                 cipher.write_all(&input).unwrap();
 
                 let mut reader = cipher.finalize();
