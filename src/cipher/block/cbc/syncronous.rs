@@ -23,8 +23,6 @@ pub struct CbcEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usi
 
 impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherInfo for CbcEncryption<T, B> {
     const BLOCKSIZE: usize = T::BLOCKSIZE;
-    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
-    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryption<T, B> {
@@ -78,7 +76,7 @@ impl<T: PrimitiveEncryption<B>, const B: usize> io::Write for CbcEncryption<T, B
 
     fn flush(&mut self) -> io::Result<()> {
         use io::ErrorKind;
-        if !self.buffer.is_full() {
+        if !self.buffer.is_full() && self.buffer.capacity() != B {
             return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
         }
 
@@ -97,8 +95,6 @@ pub struct CbcDecryption<T: PrimitiveDecryption<BLOCKSIZE>, const BLOCKSIZE: usi
 
 impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherInfo for CbcDecryption<T, B> {
     const BLOCKSIZE: usize = T::BLOCKSIZE;
-    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
-    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
 }
 
 impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
@@ -152,7 +148,7 @@ impl<T: PrimitiveDecryption<B>, const B: usize> io::Write for CbcDecryption<T, B
 
     fn flush(&mut self) -> io::Result<()> {
         use io::ErrorKind;
-        if !self.buffer.is_full() {
+        if !self.buffer.is_full() && self.buffer.capacity() != B {
             return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
         }
 

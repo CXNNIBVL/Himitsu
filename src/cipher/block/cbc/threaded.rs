@@ -25,8 +25,6 @@ impl<T, const B: usize> BlockCipherInfo for ThreadedCbcDecryption<T,B>
     where T: PrimitiveDecryption<B> + Send + Sync + 'static
 {
     const BLOCKSIZE: usize = T::BLOCKSIZE;
-    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
-    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
 }
 
 impl<T, const B: usize> ThreadedCbcDecryption<T, B> 
@@ -84,7 +82,7 @@ impl<T, const B: usize> io::Write for ThreadedCbcDecryption<T, B>
 
     fn flush(&mut self) -> io::Result<()> {
         use io::ErrorKind;
-        if !self.buffer.is_full() {
+        if !self.buffer.is_full() && self.buffer.capacity() != B {
             return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
         }
 

@@ -206,7 +206,7 @@ impl PrimitiveEncryption<AES_BLOCKSIZE> for Aes {
     fn encrypt(&self, state: &mut AesBlock, xor_pre: Option<&AesBlock>, xor_post: Option<&AesBlock>) {
 
 		if let Some(block) = xor_pre {
-			mem::xor_buffers(state.as_mut(), block.as_ref());
+			mem::xor_buffers_unchecked(state.as_mut(), block.as_ref());
 		}
 
 		add_roundkey(state.as_mut(), &self.cfg.expanded_key[0..16]);
@@ -229,7 +229,7 @@ impl PrimitiveEncryption<AES_BLOCKSIZE> for Aes {
 		add_roundkey(state.as_mut(), &self.cfg.expanded_key[index..]);
 
 		if let Some(block) = xor_post {
-			mem::xor_buffers(state.as_mut(), block.as_ref());	
+			mem::xor_buffers_unchecked(state.as_mut(), block.as_ref());	
 		}
     }
 }
@@ -239,7 +239,7 @@ impl PrimitiveDecryption<AES_BLOCKSIZE> for Aes {
     fn decrypt(&self, state: &mut AesBlock, xor_pre: Option<&AesBlock>, xor_post: Option<&AesBlock>) {
 
 		if let Some(block) = xor_pre {
-			mem::xor_buffers(state.as_mut(), block.as_ref());	
+			mem::xor_buffers_unchecked(state.as_mut(), block.as_ref());	
 		}
 
 		let index = self.cfg.expanded_key.len() - 16; 
@@ -260,7 +260,7 @@ impl PrimitiveDecryption<AES_BLOCKSIZE> for Aes {
 		add_roundkey(state.as_mut(), &self.cfg.expanded_key[0..16]);
 
 		if let Some(block) = xor_post {
-			mem::xor_buffers(state.as_mut(), block.as_ref());	
+			mem::xor_buffers_unchecked(state.as_mut(), block.as_ref());	
 		}
     }
 }
@@ -329,7 +329,7 @@ fn key_expansion(key: &[u8]) -> (Vec<u8>, usize) {
 		}
 
 		let ix = expanded_key.len() - acc_key_len;
-		mem::xor_buffers(&mut tmp, &expanded_key[ix..ix + 4]);
+		mem::xor_buffers_unchecked(&mut tmp, &expanded_key[ix..ix + 4]);
 
 		expanded_key.extend(tmp);
 		bytes_generated += 4;
@@ -340,7 +340,7 @@ fn key_expansion(key: &[u8]) -> (Vec<u8>, usize) {
 
 /// Xor round key into state
 fn add_roundkey(state: &mut[u8], key: &[u8]) {
-	mem::xor_buffers(state, key);
+	mem::xor_buffers_unchecked(state, key);
 }
 
 /// Substitute with SBOX

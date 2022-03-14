@@ -24,8 +24,6 @@ pub struct EcbEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usi
 
 impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherInfo for EcbEncryption<T, B> {
     const BLOCKSIZE: usize = T::BLOCKSIZE;
-    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
-    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> EcbEncryption<T, B> {
@@ -76,7 +74,7 @@ impl<T: PrimitiveEncryption<B>, const B: usize> io::Write for EcbEncryption<T, B
 
     fn flush(&mut self) -> io::Result<()> {
         use io::ErrorKind;
-        if !self.buffer.is_full() {
+        if !self.buffer.is_full() && self.buffer.capacity() != B {
             return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
         }
 
@@ -96,8 +94,6 @@ pub struct EcbDecryption<T: PrimitiveDecryption<BLOCKSIZE>, const BLOCKSIZE: usi
 
 impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherInfo for EcbDecryption<T, B> {
     const BLOCKSIZE: usize = T::BLOCKSIZE;
-    const KEYLEN_MIN: usize = T::KEYLEN_MIN;
-    const KEYLEN_MAX: usize = T::KEYLEN_MAX;
 }
 
 impl<T: PrimitiveDecryption<B>, const B: usize> EcbDecryption<T, B> {
@@ -147,7 +143,7 @@ impl<T: PrimitiveDecryption<B>, const B: usize> io::Write for EcbDecryption<T, B
 
     fn flush(&mut self) -> io::Result<()> {
         use io::ErrorKind;
-        if !self.buffer.is_full() {
+        if !self.buffer.is_full() && self.buffer.capacity() != B {
             return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
         }
 
