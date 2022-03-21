@@ -1,12 +1,7 @@
-use std::io;
-use crate::util::readable::Readable;
-
-pub trait StreamCipherEncryption: io::Write {
-    type Output: IntoIterator<Item = u8>;
-    fn finalize(self) -> Readable<Self::Output>;
+pub trait StreamCipherEncryption {
+    fn encrypt(&mut self, data: &mut [u8]);
 }
 
-pub trait StreamCipherDecryption: io::Write {
-    type Output: IntoIterator<Item = u8>;
-    fn finalize(self) -> Readable<Self::Output>;
+pub trait StreamCipherDecryption {
+    fn decrypt(&mut self, data: &mut [u8]);
 }

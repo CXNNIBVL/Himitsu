@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
 
@@ -7,12 +6,11 @@ mod tests {
     // Decode a hex string
     #[test]
     fn decode() {
-
         let hx_s = "0x01 0x02 0x03 0x04 0x05";
         let decoded = HexEncoder::builder()
-                                .with_header("0x")
-                                .with_seperator(" 0x")
-                                .decode(hx_s);
+            .with_header("0x")
+            .with_seperator(" 0x")
+            .decode(hx_s);
 
         let exp = vec![1, 2, 3, 4, 5];
         assert_eq!(decoded, exp)
@@ -21,7 +19,6 @@ mod tests {
     // Encode some data with a groupsize of 1
     #[test]
     fn encode_groupsize_1() {
-
         let v = vec![1u8, 2, 3, 4];
         let encoded = HexEncoder::default().encode(&v);
         let exp = "01:02:03:04";

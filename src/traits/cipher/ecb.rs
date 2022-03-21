@@ -1,7 +1,9 @@
-use crate::cipher::block::ecb::{EcbEncryption, EcbDecryption, ThreadedEcbEncryption, ThreadedEcbDecryption};
+use crate::cipher::block::ecb::{
+    EcbDecryption, EcbEncryption, ThreadedEcbDecryption, ThreadedEcbEncryption,
+};
 use crate::traits::cipher::{
+    BlockCipherPrimitiveDecryption as PrimitiveDecryption,
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
-    BlockCipherPrimitiveDecryption as PrimitiveDecryption
 };
 
 pub trait WithEcbEncryption<const BLOCKSIZE: usize> {
@@ -30,28 +32,42 @@ impl<T: PrimitiveDecryption<B>, const B: usize> WithEcbDecryption<B> for T {
 
 pub trait WithThreadedEcbEncryption<const BLOCKSIZE: usize> {
     type Primitive: PrimitiveEncryption<BLOCKSIZE> + Send + Sync + 'static;
-    fn with_threaded_ecb_encryption(self, threads: usize) -> ThreadedEcbEncryption<Self::Primitive, BLOCKSIZE>;
+    fn with_threaded_ecb_encryption(
+        self,
+        threads: usize,
+    ) -> ThreadedEcbEncryption<Self::Primitive, BLOCKSIZE>;
 }
 
-impl<T, const B: usize> WithThreadedEcbEncryption<B> for T 
-    where T: PrimitiveEncryption<B> + Send + Sync + 'static
+impl<T, const B: usize> WithThreadedEcbEncryption<B> for T
+where
+    T: PrimitiveEncryption<B> + Send + Sync + 'static,
 {
     type Primitive = Self;
-    fn with_threaded_ecb_encryption(self, threads: usize) -> ThreadedEcbEncryption<Self::Primitive, B> {
+    fn with_threaded_ecb_encryption(
+        self,
+        threads: usize,
+    ) -> ThreadedEcbEncryption<Self::Primitive, B> {
         ThreadedEcbEncryption::new(self, threads)
     }
 }
 
 pub trait WithThreadedEcbDecryption<const BLOCKSIZE: usize> {
     type Primitive: PrimitiveDecryption<BLOCKSIZE> + Send + Sync + 'static;
-    fn with_threaded_ecb_decryption(self, threads: usize) -> ThreadedEcbDecryption<Self::Primitive, BLOCKSIZE>;
+    fn with_threaded_ecb_decryption(
+        self,
+        threads: usize,
+    ) -> ThreadedEcbDecryption<Self::Primitive, BLOCKSIZE>;
 }
 
-impl<T, const B: usize> WithThreadedEcbDecryption<B> for T 
-    where T: PrimitiveDecryption<B> + Send + Sync + 'static
+impl<T, const B: usize> WithThreadedEcbDecryption<B> for T
+where
+    T: PrimitiveDecryption<B> + Send + Sync + 'static,
 {
     type Primitive = Self;
-    fn with_threaded_ecb_decryption(self, threads: usize) -> ThreadedEcbDecryption<Self::Primitive, B> {
+    fn with_threaded_ecb_decryption(
+        self,
+        threads: usize,
+    ) -> ThreadedEcbDecryption<Self::Primitive, B> {
         ThreadedEcbDecryption::new(self, threads)
     }
 }

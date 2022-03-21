@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
 
@@ -34,10 +33,10 @@ mod tests {
     fn decode_basic_zero_pad() {
         let data = "aaa";
         let encoded = Base64Encoder::default().encode(data.as_bytes());
-        
+
         match Base64Encoder::default().decode(&encoded) {
             Ok(v) => assert_eq!(data.as_bytes(), v),
-            Err(_) => assert!(false)
+            Err(_) => assert!(false),
         };
     }
 
@@ -49,7 +48,7 @@ mod tests {
 
         match Base64Encoder::default().decode(&encoded) {
             Ok(v) => assert_eq!(data.as_bytes(), v),
-            Err(_) => assert!(false)
+            Err(_) => assert!(false),
         };
     }
 
@@ -61,7 +60,7 @@ mod tests {
 
         match Base64Encoder::default().decode(&encoded) {
             Ok(v) => assert_eq!(data.as_bytes(), v),
-            Err(_) => assert!(false)
+            Err(_) => assert!(false),
         };
     }
 
@@ -69,13 +68,13 @@ mod tests {
     #[test]
     fn decode_basic_invalid_length() {
         let data = "a";
-        
+
         match Base64Encoder::default().decode(&data) {
             Ok(_) => assert!(false),
             Err(e) => match e {
                 Base64Error::InvalidFormat(_) => assert!(false),
-                Base64Error::InvalidInputLength(s) => assert_eq!(s, 1)
-            }
+                Base64Error::InvalidInputLength(s) => assert_eq!(s, 1),
+            },
         }
     }
 
@@ -88,8 +87,8 @@ mod tests {
             Ok(_) => assert!(false),
             Err(e) => match e {
                 Base64Error::InvalidInputLength(_) => assert!(false),
-                Base64Error::InvalidFormat(_) => assert!(true)
-            }
+                Base64Error::InvalidFormat(_) => assert!(true),
+            },
         }
     }
 }

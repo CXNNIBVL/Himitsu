@@ -1,42 +1,77 @@
-use std::ops::{Rem, Mul, Sub, Div};
+use std::ops::{Div, Mul, Rem, Sub};
 
-pub trait ExtendedGcd: Copy + PartialEq<Self> + Div<Output=Self> + Rem<Output=Self> + Sub<Output=Self> + Mul<Output=Self> {
-
+pub trait ExtendedGcd:
+    Copy
+    + PartialEq<Self>
+    + Div<Output = Self>
+    + Rem<Output = Self>
+    + Sub<Output = Self>
+    + Mul<Output = Self>
+{
     const ZERO: Self;
     const ONE: Self;
 
     // Returns (gcd, First Bezout's coefficient, second Bezout's Coefficient
-    fn extended_gcd(mut x: Self, mut y: Self) -> (Self,Self,Self) {
-        let (mut a0,mut a1,mut b0,mut b1) = (Self::ONE, Self::ZERO, Self::ZERO, Self::ONE);
+    fn extended_gcd(mut x: Self, mut y: Self) -> (Self, Self, Self) {
+        let (mut a0, mut a1, mut b0, mut b1) = (Self::ONE, Self::ZERO, Self::ZERO, Self::ONE);
 
         while y != Self::ZERO {
-            let (q,r)  = (x / y, x % y);
-            let (c, d) = ( a0 - q * a1, b0 - q * b1  ); 
+            let (q, r) = (x / y, x % y);
+            let (c, d) = (a0 - q * a1, b0 - q * b1);
 
             x = y;
             y = r;
             a0 = a1;
             a1 = c;
-            b0 = b1; 
+            b0 = b1;
             b1 = d;
-
         }
 
         (x, a0, b0)
     }
 }
 
-impl ExtendedGcd for u8 { const ZERO: Self = 0; const ONE: Self = 1; }
-impl ExtendedGcd for u16 { const ZERO: Self = 0; const ONE: Self = 1; }
-impl ExtendedGcd for u32 { const ZERO: Self = 0; const ONE: Self = 1; }
-impl ExtendedGcd for u64 { const ZERO: Self = 0; const ONE: Self = 1; }
-impl ExtendedGcd for usize { const ZERO: Self = 0; const ONE: Self = 1; }
+impl ExtendedGcd for u8 {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
+impl ExtendedGcd for u16 {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
+impl ExtendedGcd for u32 {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
+impl ExtendedGcd for u64 {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
+impl ExtendedGcd for usize {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
 
-impl ExtendedGcd for i8 { const ZERO: Self = 0; const ONE: Self = 1; }
-impl ExtendedGcd for i16 { const ZERO: Self = 0; const ONE: Self = 1; }
-impl ExtendedGcd for i32 { const ZERO: Self = 0; const ONE: Self = 1; }
-impl ExtendedGcd for i64 { const ZERO: Self = 0; const ONE: Self = 1; }
-impl ExtendedGcd for isize { const ZERO: Self = 0; const ONE: Self = 1; }
+impl ExtendedGcd for i8 {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
+impl ExtendedGcd for i16 {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
+impl ExtendedGcd for i32 {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
+impl ExtendedGcd for i64 {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
+impl ExtendedGcd for isize {
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+}
 
 mod gf {
 
@@ -46,7 +81,7 @@ mod gf {
         for x in 0u8..=255u8 {
             // If zero, the multiplication is results in GF(1)
             // If non-zero, the multiplication ends with something different.
-            let y = mul(sel,x) ^ 1;
+            let y = mul(sel, x) ^ 1;
 
             // OR all bits together in the rightmost bit. If y is zero, that means that the
             // result of ORing all bits together will also be zero. Otherwise, it will be 1.
@@ -60,7 +95,7 @@ mod gf {
         p
     }
     fn extend_bit(input: u8) -> u8 {
-    (((input) as i8) << 7).wrapping_shr(7) as u8
+        (((input) as i8) << 7).wrapping_shr(7) as u8
     }
 
     pub fn mul(sel: u8, rhs: u8) -> u8 {
@@ -95,11 +130,9 @@ mod gf {
             a ^= extend_bit(carry & 1) & 0x1b;
         }
 
-       p
+        p
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -124,5 +157,4 @@ mod tests {
         let m = gf::mul(el, inv);
         println!("m = {}", m);
     }
-
 }

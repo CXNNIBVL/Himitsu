@@ -1,8 +1,4 @@
-use std::io;
-use crate::util::{
-    buffer::FixedBuffer,
-    readable::Readable
-};
+use crate::util::buffer::FixedBuffer;
 use crate::traits::cipher::{
     StreamCipherEncryption as StreamEncryption,
     StreamCipherDecryption as StreamDecryption,
@@ -13,68 +9,77 @@ use crate::mem;
 pub struct CfbEncryption<const BLOCKSIZE: usize, T: PrimitiveEncryption<BLOCKSIZE>> {
     primitive: T,
     iv: FixedBuffer<u8, BLOCKSIZE>,
-    out: Vec<u8>
+    pos: usize
 }
 
-impl<const B: usize, T: PrimitiveEncryption<B>> io::Write for CfbEncryption<B, T> {
+impl<const B: usize, T: PrimitiveEncryption<B>> CfbEncryption<B,T> {
+    pub fn new(primitive: T, iv: &[u8]) -> Self {
 
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.out.extend_from_slice(buf);
-        Ok(buf.len())
-    }
+        let mut iv_buf = FixedBuffer::new();
+        iv_buf.push_slice(iv);
 
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
+        Self { primitive, iv: iv_buf, pos: B }
     }
 }
 
 impl<const B: usize, T: PrimitiveEncryption<B>> StreamEncryption for CfbEncryption<B,T> {
-    type Output = Vec<u8>;
-    fn finalize(mut self) -> Readable<Self::Output> {
+    fn encrypt(&mut self, data: &mut [u8]) {
 
-        let chunked = self.out.chunks_mut(B);
+        let mut encrypted = 0;
 
-        for chunk in chunked {
-            self.primitive.encrypt(self.iv.as_mut(), None, None);
-            mem::xor_buffers(chunk, self.iv.as_ref());
-            self.iv.override_contents(chunk, B);   
+        while encrypted < data.len() {
+            if self.pos == self.iv.len() { 
+                self.primitive.encrypt(self.iv.as_mut(), None, None);
+                self.pos = 0;
+            }
+
+            let op_slice = &mut self.iv[self.pos..];
+            let xored = mem::xor_buffers(&mut data[encrypted..], op_slice);
+            op_slice.copy_from_slice(&data[encrypted..encrypted+xored]);
+            
+            encrypted += xored;
+            self.pos += xored;
         }
-        
-        Readable::new(self.out)
     }
 }
 
 pub struct CfbDecryption<const BLOCKSIZE: usize, T: PrimitiveEncryption<BLOCKSIZE>> {
     primitive: T,
     iv: FixedBuffer<u8, BLOCKSIZE>,
-    out: Vec<u8>
+    pos: usize
 }
 
-impl<const B: usize, T: PrimitiveEncryption<B>> io::Write for CfbDecryption<B, T> {
+impl<const B: usize, T: PrimitiveEncryption<B>> CfbDecryption<B,T> {
+    pub fn new(primitive: T, iv: &[u8]) -> Self {
 
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.out.extend_from_slice(buf);
-        Ok(buf.len())
-    }
+        let mut iv_buf = FixedBuffer::new();
+        iv_buf.push_slice(iv);
 
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
+        Self { primitive, iv: iv_buf, pos: B }
     }
 }
 
 impl<const B: usize, T: PrimitiveEncryption<B>> StreamDecryption for CfbDecryption<B,T> {
-    type Output = Vec<u8>;
-    fn finalize(mut self) -> Readable<Self::Output> {
+    fn decrypt(&mut self, data: &mut [u8]) {
 
-        let chunked = self.out.chunks_mut(B);
+        let mut decrypted = 0;
 
-        for chunk in chunked {
-            
+        while decrypted < data.len() {
+            if self.pos == self.iv.len() { 
+                self.primitive.encrypt(self.iv.as_mut(), None, None);
+                self.pos = 0;
+            }
+
+            let min = std::cmp::min(data.len() - decrypted, self.iv.len() - self.pos);
+            let op_slice = &mut self.iv[self.pos..self.pos+min];
+            let dec_slice = &mut data[decrypted..decrypted+min];
+
+            dec_slice.swap_with_slice(op_slice);
+            mem::xor_buffers(dec_slice, op_slice);
+
+            self.pos += min;
+            decrypted += min;
         }
-        
-        Readable::new(self.out)
     }
 }
-
-
 

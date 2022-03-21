@@ -1,7 +1,7 @@
 use std::ops::BitXorAssign;
 
 /// XORs src elements into dst and returns the number of xored elements
-/// 
+///
 /// src and dst must be the same length, otherwise the function will panic
 pub fn xor_buffers_unchecked<T: BitXorAssign + Clone>(dst: &mut [T], src: &[T]) -> usize {
     for i in 0..dst.len() {
@@ -12,7 +12,7 @@ pub fn xor_buffers_unchecked<T: BitXorAssign + Clone>(dst: &mut [T], src: &[T]) 
 }
 
 /// XORs src elements into dst and returns the number of xored elements
-/// 
+///
 /// XORs at least `min(src, dst)` elements
 pub fn xor_buffers<T: BitXorAssign + Clone>(dst: &mut [T], src: &[T]) -> usize {
     use std::cmp::min;

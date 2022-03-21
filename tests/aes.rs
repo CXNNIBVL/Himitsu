@@ -5,82 +5,79 @@ mod tests {
 
     use super::common::decode;
     use himitsu::{
-        cipher::block::primitive::aes::*, 
-        traits::cipher::{
-            BlockCipherPrimitiveEncryption,
-            BlockCipherPrimitiveDecryption
-        }
+        cipher::block::primitive::aes::*,
+        traits::cipher::{BlockCipherPrimitiveDecryption, BlockCipherPrimitiveEncryption},
     };
 
     #[test]
-	fn test_aes_128_enc() {
-		let plaintext = decode("00112233445566778899aabbccddeeff");
-		let key = decode("000102030405060708090a0b0c0d0e0f");
-		let expected = decode("69c4e0d86a7b0430d8cdb78070b4c55a");
+    fn test_aes_128_enc() {
+        let plaintext = decode("00112233445566778899aabbccddeeff");
+        let key = decode("000102030405060708090a0b0c0d0e0f");
+        let expected = decode("69c4e0d86a7b0430d8cdb78070b4c55a");
 
-		let mut buf = [0;AES_BLOCKSIZE];
+        let mut buf = [0; AES_BLOCKSIZE];
 
-		for (i, element) in plaintext.into_iter().enumerate() {
-			buf[i] = element;
-		}
+        for (i, element) in plaintext.into_iter().enumerate() {
+            buf[i] = element;
+        }
 
-		let aes = Aes::new(&key);
-		aes.encrypt(&mut buf, None, None);
+        let aes = Aes::new(&key);
+        aes.encrypt(&mut buf, None, None);
 
-		assert_eq!(expected, buf.as_ref());
-	}
-
-	#[test]
-	fn test_aes_192_enc() {
-		let plaintext = decode("00112233445566778899aabbccddeeff");
-		let key = decode("000102030405060708090a0b0c0d0e0f1011121314151617");
-		let expected = decode("dda97ca4864cdfe06eaf70a0ec0d7191");
-
-		let mut buf = [0;AES_BLOCKSIZE];
-
-		for (i, element) in plaintext.into_iter().enumerate() {
-			buf[i] = element;
-		}
-
-		let aes = Aes::new(&key);
-		aes.encrypt(&mut buf, None, None);
-
-		assert_eq!(expected, buf.as_ref());
-	}
-
-	#[test]
-	fn test_aes_256_enc() {
-		let plaintext = decode("00112233445566778899aabbccddeeff");
-		let key = decode("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
-		let expected = decode("8ea2b7ca516745bfeafc49904b496089");
-
-		let mut buf = [0;AES_BLOCKSIZE];
-
-		for (i, element) in plaintext.into_iter().enumerate() {
-			buf[i] = element;
-		}
-
-		let aes = Aes::new(&key);
-		aes.encrypt(&mut buf, None, None);
-
-		assert_eq!(expected, buf.as_ref());
-	}
+        assert_eq!(expected, buf.as_ref());
+    }
 
     #[test]
-	fn test_aes_128_dec() {
-		let plaintext = decode("69c4e0d86a7b0430d8cdb78070b4c55a");
-		let key = decode("000102030405060708090a0b0c0d0e0f");
-		let expected = decode("00112233445566778899aabbccddeeff");
+    fn test_aes_192_enc() {
+        let plaintext = decode("00112233445566778899aabbccddeeff");
+        let key = decode("000102030405060708090a0b0c0d0e0f1011121314151617");
+        let expected = decode("dda97ca4864cdfe06eaf70a0ec0d7191");
 
-		let mut buf = [0;AES_BLOCKSIZE];
+        let mut buf = [0; AES_BLOCKSIZE];
 
-		for (i, element) in plaintext.into_iter().enumerate() {
-			buf[i] = element;
-		}
+        for (i, element) in plaintext.into_iter().enumerate() {
+            buf[i] = element;
+        }
 
-		let aes = Aes::new(&key);
-		aes.decrypt(&mut buf, None, None);
+        let aes = Aes::new(&key);
+        aes.encrypt(&mut buf, None, None);
 
-		assert_eq!(expected, buf.as_ref());
-	}
+        assert_eq!(expected, buf.as_ref());
+    }
+
+    #[test]
+    fn test_aes_256_enc() {
+        let plaintext = decode("00112233445566778899aabbccddeeff");
+        let key = decode("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
+        let expected = decode("8ea2b7ca516745bfeafc49904b496089");
+
+        let mut buf = [0; AES_BLOCKSIZE];
+
+        for (i, element) in plaintext.into_iter().enumerate() {
+            buf[i] = element;
+        }
+
+        let aes = Aes::new(&key);
+        aes.encrypt(&mut buf, None, None);
+
+        assert_eq!(expected, buf.as_ref());
+    }
+
+    #[test]
+    fn test_aes_128_dec() {
+        let plaintext = decode("69c4e0d86a7b0430d8cdb78070b4c55a");
+        let key = decode("000102030405060708090a0b0c0d0e0f");
+        let expected = decode("00112233445566778899aabbccddeeff");
+
+        let mut buf = [0; AES_BLOCKSIZE];
+
+        for (i, element) in plaintext.into_iter().enumerate() {
+            buf[i] = element;
+        }
+
+        let aes = Aes::new(&key);
+        aes.decrypt(&mut buf, None, None);
+
+        assert_eq!(expected, buf.as_ref());
+    }
 }

@@ -1,6 +1,8 @@
 pub trait BlockCipherInfo {
     const BLOCKSIZE: usize;
-    fn block_size(&self) -> usize { Self::BLOCKSIZE }
+    fn block_size(&self) -> usize {
+        Self::BLOCKSIZE
+    }
 }
 
 pub trait BlockCipherEncryption<const BLOCKSIZE: usize>: BlockCipherInfo {

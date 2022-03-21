@@ -6,5 +6,5 @@ pub enum Base64Error {
     InvalidInputLength(usize),
 
     #[error("invalid length after stripping non-base64 characters, remainder must be either 0, 2 or 3 (found {0})")]
-    InvalidFormat(usize)
+    InvalidFormat(usize),
 }

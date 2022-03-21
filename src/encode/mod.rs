@@ -1,4 +1,4 @@
-mod hex;
 mod base64;
-pub use hex::*;
+mod hex;
 pub use base64::*;
+pub use hex::*;
