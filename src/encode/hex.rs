@@ -1,5 +1,9 @@
-const CHARSET_UPPERCASE: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
-const CHARSET_LOWERCASE: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
+const CHARSET_UPPERCASE: [char; 16] = [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+];
+const CHARSET_LOWERCASE: [char; 16] = [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
+];
 
 #[derive(Debug, Clone)]
 pub struct HexEncoder {
@@ -7,18 +11,17 @@ pub struct HexEncoder {
     seperator: String,
     terminator: String,
     groupsize: usize,
-    case: Case
+    case: Case,
 }
 
 impl HexEncoder {
-
     pub fn builder() -> Self {
         Self {
             header: String::from(""),
             seperator: String::from(""),
             terminator: String::from(""),
             groupsize: 0,
-            case: Case::Upper
+            case: Case::Upper,
         }
     }
 
@@ -61,16 +64,14 @@ impl HexEncoder {
     /// Encodes a byte buffer to a Hex string
     /// * 'data'    - The data to encode
     pub fn encode(&self, data: &[u8]) -> String {
-
         let mut encoded = String::from("");
 
         for (i, v) in data.iter().enumerate() {
-            
             // Insert the seperator after each grouping
             if i % self.groupsize == 0 && i != 0 {
                 encoded.push_str(&self.seperator);
             }
-            
+
             // Charset indices
             let ix = ((v & 0xF0) >> 4) as usize;
             let iy = (v & 0x0F) as usize;
@@ -85,12 +86,11 @@ impl HexEncoder {
     }
 
     /// Decodes a hex string into its bytes
-    /// 
+    ///
     /// Note: Will filter out any non-hex characters
     /// * 'hex'                                 - The hex string to decode
     /// * 'header', 'seperator', 'terminator'   - can also be set by the builder and will be stripped from the string
     pub fn decode(&self, hex: &str) -> Vec<u8> {
-
         let mut decoded = Vec::new();
         // remove header, seperator and terminator
         let stripped = {
@@ -105,7 +105,7 @@ impl HexEncoder {
         while let Some(v1) = filtered.next() {
             match filtered.next() {
                 Some(v2) => decoded.push((v1 << 4) | v2),
-                _ => decoded.push(v1 << 4)
+                _ => decoded.push(v1 << 4),
             }
         }
 
@@ -126,7 +126,7 @@ impl Default for HexEncoder {
             seperator: String::from(":"),
             terminator: String::from(""),
             groupsize: 1usize,
-            case: Case::Upper
+            case: Case::Upper,
         }
     }
 }
@@ -135,14 +135,14 @@ impl Default for HexEncoder {
 #[derive(Debug, Clone)]
 enum Case {
     Upper,
-    Lower
+    Lower,
 }
 
 impl Case {
     fn value_at(&self, ix: usize) -> char {
         match self {
             Self::Upper => CHARSET_UPPERCASE[ix],
-            Self::Lower => CHARSET_LOWERCASE[ix]
+            Self::Lower => CHARSET_LOWERCASE[ix],
         }
     }
 }

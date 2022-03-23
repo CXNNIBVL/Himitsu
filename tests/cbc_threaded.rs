@@ -3,10 +3,10 @@ mod common;
 #[cfg(test)]
 mod tests {
 
-    use std::io::{Read, Write};
+    use super::common::{decode, decode_into_array};
     use himitsu::cipher::block::primitive::aes;
-    use himitsu::traits::cipher::*;
-    use super::common::decode;
+    use himitsu::provider::cipher::*;
+    use std::io::Write;
 
     macro_rules! cbc_test_dec {
         (
@@ -17,27 +17,20 @@ mod tests {
             $input: literal,
             $expected: literal
         ) => {
-
             #[test]
             fn $fn_name() {
-
                 let input = decode($input);
                 let key = decode($key);
-                let iv = decode($iv);
+                let iv = decode_into_array($iv);
                 let expected = decode($expected);
 
-                let mut cipher = <$cipher>::new(&key).with_threaded_cbc_decryption(&iv, 4);
+                let mut cipher = <$cipher>::new(&key).with_threaded_cbc_decryption(iv, 4);
                 cipher.write_all(&input).unwrap();
 
-                let mut reader = cipher.finalize();
-
-                let mut output = Vec::new();
-                reader.read_to_end(&mut output).unwrap();
+                let output: Vec<u8> = cipher.finalize();
 
                 assert_eq!(expected, output);
-
             }
-            
         };
     }
 
@@ -69,5 +62,4 @@ mod tests {
         "F58C4C04 D6E5F1BA 779EABFB 5F7BFBD6 9CFC4E96 7EDB808D 679F777B C6702C7D 39F23369 A9D9BACF A530E263 04231461 B2EB05E2 C39BE9FC DA6C1907 8C6A9D1B",
         "6BC1BEE2 2E409F96 E93D7E11 7393172A AE2D8A57 1E03AC9C 9EB76FAC 45AF8E51 30C81C46 A35CE411 E5FBC119 1A0A52EF F69F2445 DF4F9B17 AD2B417B E66C3710"
     );
-
 }

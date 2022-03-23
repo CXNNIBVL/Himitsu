@@ -1,7 +1,8 @@
-pub mod mem;
-pub mod encode;
 pub mod cipher;
-pub mod traits;
+pub mod encode;
 pub mod errors;
-pub mod util;
 pub mod math;
+pub mod mem;
+pub mod provider;
+pub mod traits;
+pub mod util;

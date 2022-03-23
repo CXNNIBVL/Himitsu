@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
 
@@ -6,7 +5,6 @@ mod tests {
 
     #[test]
     fn test_push() {
-
         let mut buf_size_4: FixedBuffer<u8, 4> = FixedBuffer::new();
 
         let data = vec![1u8, 2, 3, 4];
@@ -23,7 +21,7 @@ mod tests {
     fn test_extract() {
         let mut buf: FixedBuffer<u8, 4> = FixedBuffer::new();
         let data = vec![1, 2, 3, 4];
-        let exp = vec![1,2,3,4];
+        let exp = vec![1, 2, 3, 4];
 
         let data_iter = data.iter();
 
@@ -38,7 +36,7 @@ mod tests {
     fn test_index() {
         let mut buf: FixedBuffer<u8, 4> = FixedBuffer::new();
         let data = vec![1, 2, 3, 4];
-        
+
         for el in data.iter() {
             buf.push_ref(el);
         }
@@ -48,5 +46,4 @@ mod tests {
         buf[1] = 55;
         assert_eq!(55, buf[1]);
     }
-
 }

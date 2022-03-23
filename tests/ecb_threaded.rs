@@ -1,12 +1,11 @@
 mod common;
 
-
 #[cfg(test)]
 mod tests {
-    use std::io::{Read, Write};
-    use himitsu::cipher::block::primitive::aes;
-    use himitsu::traits::cipher::*;
     use super::common::decode;
+    use himitsu::cipher::block::primitive::aes;
+    use himitsu::provider::cipher::*;
+    use std::io::Write;
 
     macro_rules! ecb_test_enc {
         (
@@ -16,23 +15,18 @@ mod tests {
             $input: literal,
             $expected: literal
         ) => {
-
             #[test]
             fn $fn_name() {
-
                 let input = decode($input);
                 let key = decode($key);
                 let expected = decode($expected);
-                let mut output = Vec::new();
-                
+
                 let mut cipher = <$primitive>::new(&key).with_threaded_ecb_encryption(4);
                 cipher.write_all(&input).unwrap();
-                let mut reader = cipher.finalize();
-                reader.read_to_end(&mut output).unwrap();
+                let output: Vec<u8> = cipher.finalize();
 
                 assert_eq!(expected, output);
             }
-            
         };
     }
 
@@ -44,19 +38,15 @@ mod tests {
             $input: literal,
             $expected: literal
         ) => {
-
             #[test]
             fn $fn_name() {
-
                 let input = decode($input);
                 let key = decode($key);
                 let expected = decode($expected);
-                let mut output = Vec::new();
-                
+
                 let mut cipher = <$primitive>::new(&key).with_threaded_ecb_decryption(4);
                 cipher.write_all(&input).unwrap();
-                let mut reader = cipher.finalize();
-                reader.read_to_end(&mut output).unwrap();
+                let output: Vec<u8> = cipher.finalize();
 
                 assert_eq!(expected, output);
             }

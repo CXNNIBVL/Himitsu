@@ -1,131 +1,109 @@
-
-use std::mem;
-use std::io;
-use crate::traits::cipher::{
+use crate::traits::cipher::primitive::{
+    BlockCipherPrimitiveDecryption as PrimitiveDecryption,
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
-    BlockCipherPrimitiveDecryption as PrimitiveDecryption
 };
-use crate::cipher::block::primitive::threaded::{
-    ThreadedCipherEncryption as ThreadedEncryption,
-    ThreadedCipherDecryption as ThreadedDecryption
-};
-use crate::util::{
-    buffer::FixedBuffer,
-    readable::Readable
-};
-use crate::errors::blockcipher::BlockCipherError;
+use crate::util::{buffer::FixedBuffer, iopool::IoPool};
+use std::io;
+use std::iter::FromIterator;
 
-pub struct ThreadedEcbEncryption<T, const BLOCKSIZE: usize> 
-    where T: PrimitiveEncryption<BLOCKSIZE> + Send + Sync + 'static
-{
-    primitive: ThreadedEncryption<T, BLOCKSIZE>,
-    buffer: FixedBuffer<u8, BLOCKSIZE>
+type Mutator<const BLOCKSIZE: usize> = IoPool<[u8; BLOCKSIZE], [u8; BLOCKSIZE]>;
+
+pub struct ThreadedEcb<const BLOCKSIZE: usize> {
+    mutator: Mutator<BLOCKSIZE>,
+    buffer: FixedBuffer<u8, BLOCKSIZE>,
 }
 
-impl<T, const B: usize> ThreadedEcbEncryption<T, B> 
-    where T: PrimitiveEncryption<B> + Send + Sync + 'static
-{
-    /// Create a new instance from a Cipher primitive with the number of threads this function will use
-    pub fn new(primitive: T, threads: usize) -> Self {
-        Self { 
-            primitive: ThreadedEncryption::new(primitive, threads),
-            buffer: FixedBuffer::new()
+impl<const B: usize> ThreadedEcb<B> {
+    pub fn encryption<T>(primitive: T, threads: usize) -> Self
+    where
+        T: PrimitiveEncryption<B> + Send + Sync + 'static,
+    {
+        let mutator = Self::encryptor(primitive, threads);
+
+        Self {
+            mutator,
+            buffer: FixedBuffer::new(),
         }
     }
 
+    pub fn decryption<T>(primitive: T, threads: usize) -> Self
+    where
+        T: PrimitiveDecryption<B> + Send + Sync + 'static,
+    {
+        let mutator = Self::decryptor(primitive, threads);
+
+        Self {
+            mutator,
+            buffer: FixedBuffer::new(),
+        }
+    }
+
+    fn encryptor<T>(primitive: T, threads: usize) -> Mutator<B>
+    where
+        T: PrimitiveEncryption<B> + Send + Sync + 'static,
+    {
+        Mutator::ordered_with_shared(primitive, threads, |cipher, mut block| {
+            cipher.encrypt(&mut block);
+            block
+        })
+    }
+
+    fn decryptor<T>(primitive: T, threads: usize) -> Mutator<B>
+    where
+        T: PrimitiveDecryption<B> + Send + Sync + 'static,
+    {
+        Mutator::ordered_with_shared(primitive, threads, |cipher, mut block| {
+            cipher.decrypt(&mut block);
+            block
+        })
+    }
+
     fn process_buffer(&mut self) {
-        let mut_block = mem::replace(&mut self.buffer, FixedBuffer::new());
-        self.primitive.put(mut_block.into(), None, None);
+        let block = self.buffer.extract();
+        self.mutator.push(block);
+    }
+
+    pub fn missing(&self) -> Option<usize> {
+        if !self.buffer.is_full() && !self.buffer.is_empty() {
+            return Some(self.buffer.capacity());
+        }
+
+        None
     }
 
     /// Consumes the cipher, ignoring any buffered bytes and returns a Readable with the processed contents
-    pub fn finalize(mut self) -> Readable<Vec<u8>> {
-        Readable::new(self.primitive.finalize())
+    pub fn finalize<I>(mut self) -> I
+    where
+        I: FromIterator<u8>,
+    {
+        self.mutator.finalize().into_iter().flatten().collect()
+    }
+
+    pub fn finalize_and_reset<I>(&mut self) -> I
+    where I: FromIterator<u8>
+    {
+        self.buffer = FixedBuffer::new();
+        self.mutator.finalize().into_iter().flatten().collect()
     }
 }
 
-impl<T, const B: usize> io::Write for ThreadedEcbEncryption<T,B> 
-    where T: PrimitiveEncryption<B> + Send + Sync + 'static
-{
+impl<const B: usize> io::Write for ThreadedEcb<B> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let mut written = 0;
 
         // Push buf until all contents have been written, if necessary, then encrypt buffer
         while written < buf.len() {
-
             written += self.buffer.push_slice(&buf[written..]);
 
-            if self.buffer.is_full() { self.process_buffer(); }
+            if self.buffer.is_full() {
+                self.process_buffer();
+            }
         }
 
         Ok(written)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        use io::ErrorKind;
-        if !self.buffer.is_full() {
-            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
-        }
-
-        Ok(())
-    }
-}
-
-
-
-pub struct ThreadedEcbDecryption<T, const BLOCKSIZE: usize> 
-    where T: PrimitiveDecryption<BLOCKSIZE> + Send + Sync + 'static
-{
-    primitive: ThreadedDecryption<T, BLOCKSIZE>,
-    buffer: FixedBuffer<u8, BLOCKSIZE>
-}
-
-impl<T, const B: usize> ThreadedEcbDecryption<T, B> 
-    where T: PrimitiveDecryption<B> + Send + Sync + 'static
-{
-
-    /// Create a new instance from a Cipher primitive with the number of threads this function will use
-    pub fn new(primitive: T, threads: usize) -> Self {
-        Self { 
-            primitive: ThreadedDecryption::new(primitive, threads),
-            buffer: FixedBuffer::new()
-        }
-    }
-
-    fn process_buffer(&mut self) {
-        let mut_block = mem::replace(&mut self.buffer, FixedBuffer::new());
-        self.primitive.put(mut_block.into(), None, None);
-    }
-
-    /// Consumes the cipher, ignoring any buffered bytes and returns a Readable with the processed contents
-    pub fn finalize(mut self) -> Readable<Vec<u8>> {
-        Readable::new(self.primitive.finalize())
-    }
-}
-
-impl<T, const B: usize> io::Write for ThreadedEcbDecryption<T,B> 
-    where T: PrimitiveDecryption<B> + Send + Sync + 'static
-{
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let mut written = 0;
-
-        // Push buf until all contents have been written, if necessary, then encrypt buffer
-        while written < buf.len() {
-
-            written += self.buffer.push_slice(&buf[written..]);
-
-            if self.buffer.is_full() { self.process_buffer(); }
-        }
-
-        Ok(written)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        use io::ErrorKind;
-        if !self.buffer.is_full() {
-            return Err(io::Error::new(ErrorKind::UnexpectedEof, BlockCipherError::IncompleteBlock(self.buffer.capacity())))
-        }
-
         Ok(())
     }
 }

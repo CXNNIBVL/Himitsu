@@ -6,7 +6,6 @@ mod tests {
     // Compare two equal buffers
     #[test]
     fn a_eq_b() {
-
         let a: Vec<u8> = vec![1, 2, 3, 4];
         let b = a.clone();
 
@@ -19,7 +18,7 @@ mod tests {
         let a = vec![1, 2, 3, 4];
         let b = vec![4, 2, 3, 4];
 
-        assert!(!memeq_s(&a,&b))
+        assert!(!memeq_s(&a, &b))
     }
 
     // Compare two buffers that differ in length
@@ -28,6 +27,6 @@ mod tests {
         let a = vec![1, 2, 3, 4, 5];
         let b = vec![1, 2, 3, 4];
 
-        assert!(!memeq_s(&a,&b))
+        assert!(!memeq_s(&a, &b))
     }
 }
