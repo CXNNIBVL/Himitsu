@@ -57,11 +57,20 @@ impl<const B: usize> ThreadedCbcDecryption<B> {
         None
     }
 
-    /// Returns a Readable with the processed contents
     pub fn finalize<I>(mut self) -> I
     where
         I: FromIterator<u8>,
     {
+        self.mutator.finalize().into_iter().flatten().collect()
+    }
+
+    pub fn finalize_and_reset<I>(&mut self, iv: [u8; B]) -> I
+    where
+        I: FromIterator<u8>
+    {
+        self.buffer = FixedBuffer::new();
+        self.iv = iv;
+
         self.mutator.finalize().into_iter().flatten().collect()
     }
 }

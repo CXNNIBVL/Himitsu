@@ -78,6 +78,13 @@ impl<const B: usize> ThreadedEcb<B> {
     {
         self.mutator.finalize().into_iter().flatten().collect()
     }
+
+    pub fn finalize_and_reset<I>(&mut self) -> I
+    where I: FromIterator<u8>
+    {
+        self.buffer = FixedBuffer::new();
+        self.mutator.finalize().into_iter().flatten().collect()
+    }
 }
 
 impl<const B: usize> io::Write for ThreadedEcb<B> {
