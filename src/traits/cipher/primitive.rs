@@ -17,22 +17,10 @@ pub trait BlockCipherPrimitiveInfo {
 
 /// Trait for a blockcipher primitive encryption
 pub trait BlockCipherPrimitiveEncryption<const BLOCKSIZE: usize>: BlockCipherPrimitiveInfo {
-    /// Mutates the mut_block, performs an xor with xor_pre pre mutation and xor_post post mutation (if specified)
-    fn encrypt(
-        &self,
-        mut_block: &mut [u8; BLOCKSIZE],
-        xor_pre: Option<&[u8; BLOCKSIZE]>,
-        xor_post: Option<&[u8; BLOCKSIZE]>,
-    );
+    fn encrypt(&self, block: &mut [u8; BLOCKSIZE]);
 }
 
 /// Trait for a blockcipher primitive decryption
 pub trait BlockCipherPrimitiveDecryption<const BLOCKSIZE: usize>: BlockCipherPrimitiveInfo {
-    /// Mutates the mut_block, performs an xor with xor_pre pre mutation and xor_post post mutation (if specified)
-    fn decrypt(
-        &self,
-        mut_block: &mut [u8; BLOCKSIZE],
-        xor_pre: Option<&[u8; BLOCKSIZE]>,
-        xor_post: Option<&[u8; BLOCKSIZE]>,
-    );
+    fn decrypt(&self, block: &mut [u8; BLOCKSIZE]);
 }

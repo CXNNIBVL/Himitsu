@@ -1,48 +1,52 @@
-use crate::cipher::block::primitive::threaded::ThreadedCipherDecryption as ThreadedDecryption;
-use crate::traits::cipher::{
-    BlockCipherInfo, BlockCipherPrimitiveDecryption as PrimitiveDecryption,
-};
-use crate::util::{buffer::FixedBuffer, readable::Readable};
+use crate::mem;
+use crate::traits::cipher::BlockCipherPrimitiveDecryption as PrimitiveDecryption;
+use crate::util::{buffer::FixedBuffer, iopool::IoPool};
 use std::io;
+use std::iter::FromIterator;
 
-pub struct ThreadedCbcDecryption<T, const BLOCKSIZE: usize>
-where
-    T: PrimitiveDecryption<BLOCKSIZE> + Send + Sync + 'static,
-{
-    primitive: ThreadedDecryption<T, BLOCKSIZE>,
+struct Transmission<const BLOCKSIZE: usize> {
+    block: [u8; BLOCKSIZE],
+    iv: [u8; BLOCKSIZE],
+}
+
+type Mutator<const BLOCKSIZE: usize> = IoPool<Transmission<BLOCKSIZE>, [u8; BLOCKSIZE]>;
+
+pub struct ThreadedCbcDecryption<const BLOCKSIZE: usize> {
+    mutator: Mutator<BLOCKSIZE>,
     buffer: FixedBuffer<u8, BLOCKSIZE>,
-    iv: FixedBuffer<u8, BLOCKSIZE>,
+    iv: [u8; BLOCKSIZE],
 }
 
-impl<T, const B: usize> BlockCipherInfo for ThreadedCbcDecryption<T, B>
-where
-    T: PrimitiveDecryption<B> + Send + Sync + 'static,
-{
-    const BLOCKSIZE: usize = T::BLOCKSIZE;
-}
-
-impl<T, const B: usize> ThreadedCbcDecryption<T, B>
-where
-    T: PrimitiveDecryption<B> + Send + Sync + 'static,
-{
-    pub fn new(primitive: T, iv: &[u8], threads: usize) -> Self {
-        let mut iv_buf = FixedBuffer::new();
-        iv_buf.push_slice(iv);
-
+impl<const B: usize> ThreadedCbcDecryption<B> {
+    pub fn new<T>(primitive: T, iv: [u8; B], threads: usize) -> Self
+    where
+        T: PrimitiveDecryption<B> + Send + Sync + 'static,
+    {
         Self {
-            primitive: ThreadedDecryption::new(primitive, threads),
+            mutator: Self::mutator(primitive, threads),
             buffer: FixedBuffer::new(),
-            iv: iv_buf,
+            iv,
         }
     }
 
+    fn mutator<T>(primitive: T, threads: usize) -> Mutator<B>
+    where
+        T: PrimitiveDecryption<B> + Send + Sync + 'static,
+    {
+        Mutator::ordered_with_shared(primitive, threads, |cipher, mut msg| {
+            cipher.decrypt(&mut msg.block);
+            mem::xor_buffers(&mut msg.block, &msg.iv);
+            msg.block
+        })
+    }
+
     fn process_buffer(&mut self) {
-        let new_iv = FixedBuffer::from(self.buffer);
+        let new_iv = FixedBuffer::from(self.buffer).into();
 
-        let buf = self.buffer.extract();
-        let iv = self.iv.extract_in_place(new_iv.into());
+        let block = self.buffer.extract();
+        let iv = std::mem::replace(&mut self.iv, new_iv);
 
-        self.primitive.put(buf, None, Some(iv));
+        self.mutator.push(Transmission { block, iv });
     }
 
     pub fn missing(&self) -> Option<usize> {
@@ -54,15 +58,15 @@ where
     }
 
     /// Returns a Readable with the processed contents
-    pub fn finalize(mut self) -> Readable<Vec<u8>> {
-        Readable::new(self.primitive.finalize())
+    pub fn finalize<I>(mut self) -> I
+    where
+        I: FromIterator<u8>,
+    {
+        self.mutator.finalize().into_iter().flatten().collect()
     }
 }
 
-impl<T, const B: usize> io::Write for ThreadedCbcDecryption<T, B>
-where
-    T: PrimitiveDecryption<B> + Send + Sync + 'static,
-{
+impl<const B: usize> io::Write for ThreadedCbcDecryption<B> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let mut written = 0;
 

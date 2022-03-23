@@ -3,10 +3,10 @@ mod common;
 #[cfg(test)]
 mod tests {
 
-    use super::common::decode;
+    use super::common::{decode, decode_into_array};
     use himitsu::cipher::block::primitive::aes;
-    use himitsu::traits::cipher::*;
-    use std::io::{Read, Write};
+    use himitsu::provider::cipher::*;
+    use std::io::Write;
 
     macro_rules! cbc_test_enc {
         (
@@ -21,16 +21,13 @@ mod tests {
             fn $fn_name() {
                 let input = decode($input);
                 let key = decode($key);
-                let iv = decode($iv);
+                let iv = decode_into_array($iv);
                 let expected = decode($expected);
 
-                let mut cipher = <$cipher>::new(&key).with_cbc_encryption(&iv).buffered();
+                let mut cipher = <$cipher>::new(&key).with_cbc_encryption(iv).buffered();
                 cipher.write_all(&input).unwrap();
 
-                let mut reader = cipher.finalize();
-
-                let mut output = Vec::new();
-                reader.read_to_end(&mut output).unwrap();
+                let output: Vec<u8> = cipher.finalize();
 
                 assert_eq!(expected, output);
             }
@@ -50,16 +47,13 @@ mod tests {
             fn $fn_name() {
                 let input = decode($input);
                 let key = decode($key);
-                let iv = decode($iv);
+                let iv = decode_into_array($iv);
                 let expected = decode($expected);
 
-                let mut cipher = <$cipher>::new(&key).with_cbc_decryption(&iv).buffered();
+                let mut cipher = <$cipher>::new(&key).with_cbc_decryption(iv).buffered();
                 cipher.write_all(&input).unwrap();
 
-                let mut reader = cipher.finalize();
-
-                let mut output = Vec::new();
-                reader.read_to_end(&mut output).unwrap();
+                let output: Vec<u8> = cipher.finalize();
 
                 assert_eq!(expected, output);
             }

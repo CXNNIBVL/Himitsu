@@ -204,16 +204,7 @@ impl PrimitiveInfo for Aes {
 }
 
 impl PrimitiveEncryption<AES_BLOCKSIZE> for Aes {
-    fn encrypt(
-        &self,
-        state: &mut AesBlock,
-        xor_pre: Option<&AesBlock>,
-        xor_post: Option<&AesBlock>,
-    ) {
-        if let Some(block) = xor_pre {
-            mem::xor_buffers_unchecked(state.as_mut(), block.as_ref());
-        }
-
+    fn encrypt(&self, state: &mut AesBlock) {
         add_roundkey(state.as_mut(), &self.cfg.expanded_key[0..16]);
 
         for i in 0..self.cfg.rounds - 1 {
@@ -231,24 +222,11 @@ impl PrimitiveEncryption<AES_BLOCKSIZE> for Aes {
 
         let index = self.cfg.expanded_key.len() - 16;
         add_roundkey(state.as_mut(), &self.cfg.expanded_key[index..]);
-
-        if let Some(block) = xor_post {
-            mem::xor_buffers_unchecked(state.as_mut(), block.as_ref());
-        }
     }
 }
 
 impl PrimitiveDecryption<AES_BLOCKSIZE> for Aes {
-    fn decrypt(
-        &self,
-        state: &mut AesBlock,
-        xor_pre: Option<&AesBlock>,
-        xor_post: Option<&AesBlock>,
-    ) {
-        if let Some(block) = xor_pre {
-            mem::xor_buffers_unchecked(state.as_mut(), block.as_ref());
-        }
-
+    fn decrypt(&self, state: &mut AesBlock) {
         let index = self.cfg.expanded_key.len() - 16;
         add_roundkey(state.as_mut(), &self.cfg.expanded_key[index..]);
         sub_bytes_dec(state.as_mut());
@@ -265,10 +243,6 @@ impl PrimitiveDecryption<AES_BLOCKSIZE> for Aes {
         }
 
         add_roundkey(state.as_mut(), &self.cfg.expanded_key[0..16]);
-
-        if let Some(block) = xor_post {
-            mem::xor_buffers_unchecked(state.as_mut(), block.as_ref());
-        }
     }
 }
 

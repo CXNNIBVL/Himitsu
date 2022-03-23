@@ -1,67 +1,51 @@
+use crate::mem;
 use crate::traits::cipher::{
-    BlockCipherDecryption, BlockCipherEncryption, BlockCipherInfo,
+    BlockCipherDecryption, BlockCipherEncryption,
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
 };
-use crate::util::buffer::FixedBuffer;
 
 /// CBC Encryption Provider
 pub struct CbcEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     primitive: T,
-    iv: FixedBuffer<u8, BLOCKSIZE>,
-}
-
-impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherInfo for CbcEncryption<T, B> {
-    const BLOCKSIZE: usize = T::BLOCKSIZE;
+    iv: [u8; BLOCKSIZE],
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryption<T, B> {
     /// Create a new CBC Encryption instance from a primitive and an IV.
     /// Up to the primitives blocksize of IV contents will be used.
-    pub fn new(primitive: T, iv: &[u8]) -> Self {
-        let mut iv_buf = FixedBuffer::new();
-        iv_buf.push_slice(iv);
-
-        Self {
-            primitive,
-            iv: iv_buf,
-        }
+    pub fn new(primitive: T, iv: [u8; B]) -> Self {
+        Self { primitive, iv }
     }
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> BlockCipherEncryption<B> for CbcEncryption<T, B> {
     fn encrypt(&mut self, data: &mut [u8; B]) {
-        self.primitive.encrypt(data, Some(self.iv.as_ref()), None);
-        self.iv.as_slice_mut().copy_from_slice(data);
+        mem::xor_buffers(&mut self.iv, data);
+        self.primitive.encrypt(&mut self.iv);
+        data.copy_from_slice(&self.iv);
     }
 }
 
 pub struct CbcDecryption<T: PrimitiveDecryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     primitive: T,
-    iv: FixedBuffer<u8, BLOCKSIZE>,
-}
-
-impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherInfo for CbcDecryption<T, B> {
-    const BLOCKSIZE: usize = T::BLOCKSIZE;
+    iv: [u8; BLOCKSIZE],
 }
 
 impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
-    pub fn new(primitive: T, iv: &[u8]) -> Self {
-        let mut iv_buf = FixedBuffer::new();
-        iv_buf.push_slice(iv);
-
-        Self {
-            primitive,
-            iv: iv_buf,
-        }
+    pub fn new(primitive: T, iv: [u8; B]) -> Self {
+        Self { primitive, iv }
     }
 }
 
 impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherDecryption<B> for CbcDecryption<T, B> {
     fn decrypt(&mut self, data: &mut [u8; B]) {
-        let mut new_iv = FixedBuffer::new();
-        new_iv.push_slice(data);
-        self.primitive.decrypt(data, None, Some(self.iv.as_ref()));
+        let mut new_iv = [0; B];
+        new_iv.copy_from_slice(data);
+
+        self.primitive.decrypt(data);
+        mem::xor_buffers(data, &self.iv);
+
         self.iv = new_iv;
     }
 }

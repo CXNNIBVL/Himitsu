@@ -1,12 +1,8 @@
 mod block;
-mod cbc;
-mod ecb;
 mod cfb;
 mod primitive;
 mod stream;
 pub use block::*;
-pub use cbc::*;
-pub use ecb::*;
+pub use cfb::*;
 pub use primitive::*;
 pub use stream::*;
-pub use cfb::*;

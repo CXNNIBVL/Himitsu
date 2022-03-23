@@ -5,8 +5,8 @@ mod tests {
 
     use super::common::decode;
     use himitsu::cipher::block::primitive::aes;
-    use himitsu::traits::cipher::*;
-    use std::io::{Read, Write};
+    use himitsu::provider::cipher::*;
+    use std::io::Write;
 
     macro_rules! ecb_test_enc {
         (
@@ -21,12 +21,10 @@ mod tests {
                 let input = decode($input);
                 let key = decode($key);
                 let expected = decode($expected);
-                let mut output = Vec::new();
 
                 let mut cipher = <$primitive>::new(&key).with_ecb_encryption().buffered();
                 cipher.write_all(&input).unwrap();
-                let mut reader = cipher.finalize();
-                reader.read_to_end(&mut output).unwrap();
+                let output: Vec<u8> = cipher.finalize();
 
                 assert_eq!(expected, output);
             }
@@ -46,12 +44,10 @@ mod tests {
                 let input = decode($input);
                 let key = decode($key);
                 let expected = decode($expected);
-                let mut output = Vec::new();
 
                 let mut cipher = <$primitive>::new(&key).with_ecb_decryption().buffered();
                 cipher.write_all(&input).unwrap();
-                let mut reader = cipher.finalize();
-                reader.read_to_end(&mut output).unwrap();
+                let output: Vec<u8> = cipher.finalize();
 
                 assert_eq!(expected, output);
             }

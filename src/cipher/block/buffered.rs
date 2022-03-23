@@ -1,6 +1,7 @@
 use crate::traits::cipher::{BlockCipherDecryption, BlockCipherEncryption};
-use crate::util::{buffer::FixedBuffer, readable::Readable};
+use crate::util::buffer::FixedBuffer;
 use std::io;
+use std::iter::FromIterator;
 
 pub struct BufferedCipherEncryption<const BLOCKSIZE: usize, T: BlockCipherEncryption<BLOCKSIZE>> {
     cipher: T,
@@ -31,8 +32,11 @@ impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryption<B, T>
         self.out.extend(buf)
     }
 
-    pub fn finalize(self) -> Readable<Vec<u8>> {
-        Readable::new(self.out)
+    pub fn finalize<I>(self) -> I
+    where
+        I: FromIterator<u8>,
+    {
+        self.out.into_iter().collect()
     }
 }
 
@@ -85,8 +89,11 @@ impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryption<B, T>
         self.out.extend(buf)
     }
 
-    pub fn finalize(self) -> Readable<Vec<u8>> {
-        Readable::new(self.out)
+    pub fn finalize<I>(self) -> I
+    where
+        I: FromIterator<u8>,
+    {
+        self.out.into_iter().collect()
     }
 }
 

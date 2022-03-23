@@ -22,7 +22,7 @@ mod tests {
         }
 
         let aes = Aes::new(&key);
-        aes.encrypt(&mut buf, None, None);
+        aes.encrypt(&mut buf);
 
         assert_eq!(expected, buf.as_ref());
     }
@@ -40,7 +40,7 @@ mod tests {
         }
 
         let aes = Aes::new(&key);
-        aes.encrypt(&mut buf, None, None);
+        aes.encrypt(&mut buf);
 
         assert_eq!(expected, buf.as_ref());
     }
@@ -58,7 +58,7 @@ mod tests {
         }
 
         let aes = Aes::new(&key);
-        aes.encrypt(&mut buf, None, None);
+        aes.encrypt(&mut buf);
 
         assert_eq!(expected, buf.as_ref());
     }
@@ -76,7 +76,7 @@ mod tests {
         }
 
         let aes = Aes::new(&key);
-        aes.decrypt(&mut buf, None, None);
+        aes.decrypt(&mut buf);
 
         assert_eq!(expected, buf.as_ref());
     }
