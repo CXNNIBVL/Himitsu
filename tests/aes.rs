@@ -6,7 +6,7 @@ mod tests {
     use super::common::decode;
     use himitsu::{
         cipher::block::primitive::aes::*,
-        traits::cipher::{BlockCipherPrimitiveDecryption, BlockCipherPrimitiveEncryption},
+        traits::cipher::primitive::{BlockCipherPrimitiveDecryption, BlockCipherPrimitiveEncryption},
     };
 
     #[test]

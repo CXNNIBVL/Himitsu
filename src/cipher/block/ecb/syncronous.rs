@@ -1,7 +1,12 @@
 use crate::traits::cipher::{
-    BlockCipherDecryption, BlockCipherEncryption,
-    BlockCipherPrimitiveDecryption as PrimitiveDecryption,
-    BlockCipherPrimitiveEncryption as PrimitiveEncryption,
+    block::{
+        BlockCipherDecryption, 
+        BlockCipherEncryption
+    },
+    primitive::{
+        BlockCipherPrimitiveDecryption as PrimitiveDecryption,
+        BlockCipherPrimitiveEncryption as PrimitiveEncryption
+    }
 };
 
 /// ECB encryption provider

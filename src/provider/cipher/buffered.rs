@@ -1,5 +1,5 @@
 use crate::cipher::block::buffered::{BufferedCipherDecryption, BufferedCipherEncryption};
-use crate::traits::cipher::{BlockCipherDecryption, BlockCipherEncryption};
+use crate::traits::cipher::block::{BlockCipherDecryption, BlockCipherEncryption};
 
 pub trait WithBufferedCipherEncryption<const BLOCKSIZE: usize> {
     type Cipher: BlockCipherEncryption<BLOCKSIZE>;

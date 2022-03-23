@@ -1,4 +1,4 @@
-use crate::traits::cipher::{BlockCipherDecryption, BlockCipherEncryption};
+use crate::traits::cipher::block::{BlockCipherDecryption, BlockCipherEncryption};
 use crate::util::buffer::FixedBuffer;
 use std::io;
 use std::iter::FromIterator;

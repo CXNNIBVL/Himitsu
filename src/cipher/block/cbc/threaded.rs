@@ -1,5 +1,5 @@
 use crate::mem;
-use crate::traits::cipher::BlockCipherPrimitiveDecryption as PrimitiveDecryption;
+use crate::traits::cipher::primitive::BlockCipherPrimitiveDecryption as PrimitiveDecryption;
 use crate::util::{buffer::FixedBuffer, iopool::IoPool};
 use std::io;
 use std::iter::FromIterator;
