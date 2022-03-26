@@ -3,8 +3,13 @@ mod common;
 #[cfg(test)]
 mod tests {
     use super::common::decode;
-    use himitsu::cipher::block::primitive::aes;
-    use himitsu::provider::cipher::*;
+    use himitsu::cipher::block::{
+        primitive::aes,
+        ecb::{
+            ThreadedEcbEncryptionProvider, 
+            ThreadedEcbDecryptionProvider
+        }
+    };
     use std::io::Write;
 
     macro_rules! ecb_test_enc {

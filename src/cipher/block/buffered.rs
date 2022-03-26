@@ -3,6 +3,31 @@ use crate::util::buffer::ArrayBuffer;
 use std::io;
 use std::iter::FromIterator;
 
+pub trait BufferedCipherEncryptionProvider<const BLOCKSIZE: usize> {
+    type Cipher: BlockCipherEncryption<BLOCKSIZE>;
+    fn buffered(self) -> BufferedCipherEncryption<BLOCKSIZE, Self::Cipher>;
+}
+
+impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryptionProvider<B> for T {
+    type Cipher = Self;
+    fn buffered(self) -> BufferedCipherEncryption<B, Self::Cipher> {
+        BufferedCipherEncryption::new(self)
+    }
+}
+
+pub trait BufferedCipherDecryptionProvider<const BLOCKSIZE: usize> {
+    type Cipher: BlockCipherDecryption<BLOCKSIZE>;
+    fn buffered(self) -> BufferedCipherDecryption<BLOCKSIZE, Self::Cipher>;
+}
+
+impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryptionProvider<B> for T {
+    type Cipher = Self;
+    fn buffered(self) -> BufferedCipherDecryption<B, Self::Cipher> {
+        BufferedCipherDecryption::new(self)
+    }
+}
+
+
 pub struct BufferedCipherEncryption<const BLOCKSIZE: usize, T: BlockCipherEncryption<BLOCKSIZE>> {
     cipher: T,
     buffer: ArrayBuffer<u8, BLOCKSIZE>,
