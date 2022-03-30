@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
 
-    use himitsu::util::buffer::FixedBuffer;
+    use himitsu::util::buffer::ArrayBuffer;
 
     #[test]
     fn test_push() {
-        let mut buf_size_4: FixedBuffer<u8, 4> = FixedBuffer::new();
+        let mut buf_size_4: ArrayBuffer<u8, 4> = ArrayBuffer::new();
 
         let data = vec![1u8, 2, 3, 4];
         let data_iter = data.iter();
@@ -19,7 +19,7 @@ mod tests {
 
     #[test]
     fn test_extract() {
-        let mut buf: FixedBuffer<u8, 4> = FixedBuffer::new();
+        let mut buf: ArrayBuffer<u8, 4> = ArrayBuffer::new();
         let data = vec![1, 2, 3, 4];
         let exp = vec![1, 2, 3, 4];
 
@@ -34,7 +34,7 @@ mod tests {
 
     #[test]
     fn test_index() {
-        let mut buf: FixedBuffer<u8, 4> = FixedBuffer::new();
+        let mut buf: ArrayBuffer<u8, 4> = ArrayBuffer::new();
         let data = vec![1, 2, 3, 4];
 
         for el in data.iter() {

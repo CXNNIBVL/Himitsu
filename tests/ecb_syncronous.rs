@@ -4,8 +4,17 @@ mod common;
 mod tests {
 
     use super::common::decode;
-    use himitsu::cipher::block::primitive::aes;
-    use himitsu::provider::cipher::*;
+    use himitsu::cipher::block::{
+        primitive::aes,
+        ecb::{
+            EcbEncryptionProvider, 
+            EcbDecryptionProvider
+        },
+        buffered::{
+            BufferedCipherEncryptionProvider,
+            BufferedCipherDecryptionProvider
+        }
+    };
     use std::io::Write;
 
     macro_rules! ecb_test_enc {

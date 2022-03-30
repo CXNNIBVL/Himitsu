@@ -43,7 +43,7 @@ where
 {
     tx: Sender<Transmission<I>>,
     rx: Receiver<Transmission<O>>,
-    count: usize,
+    tx_count: usize,
     is_ordered: bool,
 }
 
@@ -61,7 +61,7 @@ where
         Self {
             tx,
             rx,
-            count: 0,
+            tx_count: 0,
             is_ordered: true,
         }
     }
@@ -75,7 +75,7 @@ where
         Self {
             tx,
             rx,
-            count: 0,
+            tx_count: 0,
             is_ordered: false,
         }
     }
@@ -90,7 +90,7 @@ where
         Self {
             tx,
             rx,
-            count: 0,
+            tx_count: 0,
             is_ordered: true,
         }
     }
@@ -105,7 +105,7 @@ where
         Self {
             tx,
             rx,
-            count: 0,
+            tx_count: 0,
             is_ordered: false,
         }
     }
@@ -120,7 +120,7 @@ where
         Self {
             tx,
             rx,
-            count: 0,
+            tx_count: 0,
             is_ordered: true,
         }
     }
@@ -135,7 +135,7 @@ where
         Self {
             tx,
             rx,
-            count: 0,
+            tx_count: 0,
             is_ordered: false,
         }
     }
@@ -243,23 +243,23 @@ where
         self.tx
             .send(Transmission {
                 inner: transmission,
-                id: self.count,
+                id: self.tx_count,
             })
             .unwrap();
 
-        self.count += 1;
+        self.tx_count += 1;
     }
 
     pub fn finalize(&mut self) -> Vec<O> {
-        let mut transmissions = Vec::with_capacity(self.count);
+        let mut transmissions = Vec::with_capacity(self.tx_count);
 
-        for _ in 0..self.count {
+        for _ in 0..self.tx_count {
             if let Ok(t) = self.rx.recv() {
                 transmissions.push(t);
             }
         }
 
-        self.count = 0;
+        self.tx_count = 0;
 
         if self.is_ordered {
             transmissions.sort()

@@ -4,7 +4,7 @@ pub use iter::*;
 use std::mem;
 
 #[derive(Clone, Copy, Debug)]
-pub struct FixedBuffer<T, const BLOCKSIZE: usize>
+pub struct ArrayBuffer<T, const BLOCKSIZE: usize>
 where
     T: Clone + Copy + Default,
 {
@@ -12,7 +12,7 @@ where
     capacity: usize,
 }
 
-impl<T, const B: usize> FixedBuffer<T, B>
+impl<T, const B: usize> ArrayBuffer<T, B>
 where
     T: Clone + Copy + Default,
 {
@@ -103,7 +103,7 @@ mod index {
     use std::ops::{Index, IndexMut};
     use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive};
 
-    impl<T, const B: usize> Index<usize> for FixedBuffer<T, B>
+    impl<T, const B: usize> Index<usize> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -114,7 +114,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> IndexMut<usize> for FixedBuffer<T, B>
+    impl<T, const B: usize> IndexMut<usize> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -123,7 +123,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> Index<Range<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> Index<Range<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -134,7 +134,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> IndexMut<Range<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> IndexMut<Range<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -143,7 +143,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> Index<RangeFrom<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> Index<RangeFrom<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -154,7 +154,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> IndexMut<RangeFrom<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> IndexMut<RangeFrom<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -163,7 +163,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> Index<RangeFull> for FixedBuffer<T, B>
+    impl<T, const B: usize> Index<RangeFull> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -174,7 +174,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> IndexMut<RangeFull> for FixedBuffer<T, B>
+    impl<T, const B: usize> IndexMut<RangeFull> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -183,7 +183,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> Index<RangeInclusive<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> Index<RangeInclusive<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -194,7 +194,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> IndexMut<RangeInclusive<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> IndexMut<RangeInclusive<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -203,7 +203,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> Index<RangeTo<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> Index<RangeTo<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -214,7 +214,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> IndexMut<RangeTo<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> IndexMut<RangeTo<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -223,7 +223,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> Index<RangeToInclusive<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> Index<RangeToInclusive<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -234,7 +234,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> IndexMut<RangeToInclusive<usize>> for FixedBuffer<T, B>
+    impl<T, const B: usize> IndexMut<RangeToInclusive<usize>> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -248,7 +248,7 @@ mod conversion {
     use super::*;
     use std::convert::{AsMut, AsRef};
 
-    impl<T, const B: usize> AsRef<[T; B]> for FixedBuffer<T, B>
+    impl<T, const B: usize> AsRef<[T; B]> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -256,8 +256,8 @@ mod conversion {
             &self.buf
         }
     }
-
-    impl<T, const B: usize> AsMut<[T; B]> for FixedBuffer<T, B>
+  
+    impl<T, const B: usize> AsMut<[T; B]> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -266,14 +266,14 @@ mod conversion {
         }
     }
 
-    impl<T: Clone + Copy + Default, const B: usize> From<[T; B]> for FixedBuffer<T, B> {
+    impl<T: Clone + Copy + Default, const B: usize> From<[T; B]> for ArrayBuffer<T, B> {
         /// Create a new filled buffer from an array of same type and length
         fn from(buf: [T; B]) -> Self {
             Self { buf, capacity: 0 }
         }
     }
 
-    impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a [T; B]> for FixedBuffer<T, B> {
+    impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a [T; B]> for ArrayBuffer<T, B> {
         fn from(buf: &'a [T; B]) -> Self {
             Self {
                 buf: buf.clone(),
@@ -282,7 +282,7 @@ mod conversion {
         }
     }
 
-    impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a mut [T; B]> for FixedBuffer<T, B> {
+    impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a mut [T; B]> for ArrayBuffer<T, B> {
         fn from(buf: &'a mut [T; B]) -> Self {
             Self {
                 buf: buf.clone(),
@@ -291,8 +291,8 @@ mod conversion {
         }
     }
 
-    impl<T: Clone + Copy + Default, const B: usize> From<FixedBuffer<T, B>> for [T; B] {
-        fn from(buf: FixedBuffer<T, B>) -> [T; B] {
+    impl<T: Clone + Copy + Default, const B: usize> From<ArrayBuffer<T, B>> for [T; B] {
+        fn from(buf: ArrayBuffer<T, B>) -> [T; B] {
             buf.buf
         }
     }
@@ -300,7 +300,7 @@ mod conversion {
 
 mod iter {
     use super::*;
-    impl<T, const B: usize> IntoIterator for FixedBuffer<T, B>
+    impl<T, const B: usize> IntoIterator for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -312,7 +312,7 @@ mod iter {
         }
     }
 
-    impl<'a, T, const B: usize> IntoIterator for &'a FixedBuffer<T, B>
+    impl<'a, T, const B: usize> IntoIterator for &'a ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
@@ -324,7 +324,7 @@ mod iter {
         }
     }
 
-    impl<'a, T, const B: usize> IntoIterator for &'a mut FixedBuffer<T, B>
+    impl<'a, T, const B: usize> IntoIterator for &'a mut ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,
     {
