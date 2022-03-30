@@ -134,7 +134,7 @@ mod index {
         }
     }
 
-    impl<T, const B: usize> IndexMut<Range<usize>> for ArrayBuffer<T, B>
+    impl<T, const B: usize> IndexMut<Range<usize>> for ArrayBuffer<T, B>r
     where
         T: Clone + Copy + Default,
     {
@@ -256,7 +256,7 @@ mod conversion {
             &self.buf
         }
     }
-
+  
     impl<T, const B: usize> AsMut<[T; B]> for ArrayBuffer<T, B>
     where
         T: Clone + Copy + Default,

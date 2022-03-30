@@ -1,8 +1,4 @@
-pub mod syncronous;
-pub mod threaded;
-
-use syncronous::*;
-use threaded::*;
+use crate::cipher::block::ecb::{EcbDecryption, EcbEncryption, ThreadedEcb};
 use crate::traits::cipher::primitive::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,

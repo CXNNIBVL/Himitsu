@@ -251,9 +251,9 @@ where
     }
 
     pub fn finalize(&mut self) -> Vec<O> {
-        let mut transmissions = Vec::with_capacity(self.tx_count);
+        let mut transmissions = Vec::with_capacity(self.count);
 
-        for _ in 0..self.tx_count {
+        for _ in 0..self.count {
             if let Ok(t) = self.rx.recv() {
                 transmissions.push(t);
             }
