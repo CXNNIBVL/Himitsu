@@ -4,8 +4,10 @@ mod common;
 mod tests {
 
     use super::common::{decode, decode_into_array};
-    use himitsu::cipher::block::primitive::aes;
-    use himitsu::provider::cipher::*;
+    use himitsu::cipher::block::{
+        primitive::aes,
+        cbc::ThreadedCbcDecryptionProvider
+    };
     use std::io::Write;
 
     macro_rules! cbc_test_dec {

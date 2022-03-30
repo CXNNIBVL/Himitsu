@@ -1,11 +1,36 @@
 use crate::traits::cipher::block::{BlockCipherDecryption, BlockCipherEncryption};
-use crate::util::buffer::FixedBuffer;
+use crate::util::buffer::ArrayBuffer;
 use std::io;
 use std::iter::FromIterator;
 
+pub trait BufferedCipherEncryptionProvider<const BLOCKSIZE: usize> {
+    type Cipher: BlockCipherEncryption<BLOCKSIZE>;
+    fn buffered(self) -> BufferedCipherEncryption<BLOCKSIZE, Self::Cipher>;
+}
+
+impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryptionProvider<B> for T {
+    type Cipher = Self;
+    fn buffered(self) -> BufferedCipherEncryption<B, Self::Cipher> {
+        BufferedCipherEncryption::new(self)
+    }
+}
+
+pub trait BufferedCipherDecryptionProvider<const BLOCKSIZE: usize> {
+    type Cipher: BlockCipherDecryption<BLOCKSIZE>;
+    fn buffered(self) -> BufferedCipherDecryption<BLOCKSIZE, Self::Cipher>;
+}
+
+impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryptionProvider<B> for T {
+    type Cipher = Self;
+    fn buffered(self) -> BufferedCipherDecryption<B, Self::Cipher> {
+        BufferedCipherDecryption::new(self)
+    }
+}
+
+
 pub struct BufferedCipherEncryption<const BLOCKSIZE: usize, T: BlockCipherEncryption<BLOCKSIZE>> {
     cipher: T,
-    buffer: FixedBuffer<u8, BLOCKSIZE>,
+    buffer: ArrayBuffer<u8, BLOCKSIZE>,
     out: Vec<u8>,
 }
 
@@ -13,7 +38,7 @@ impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryption<B, T>
     pub fn new(cipher: T) -> Self {
         Self {
             cipher,
-            buffer: FixedBuffer::new(),
+            buffer: ArrayBuffer::new(),
             out: Vec::new(),
         }
     }
@@ -43,7 +68,7 @@ impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryption<B, T>
     where
         I: FromIterator<u8>
     {
-        self.buffer = FixedBuffer::new();
+        self.buffer = ArrayBuffer::new();
         std::mem::replace(&mut self.out, Vec::new()).into_iter().collect()
     }
 }
@@ -70,7 +95,7 @@ impl<const B: usize, T: BlockCipherEncryption<B>> io::Write for BufferedCipherEn
 
 pub struct BufferedCipherDecryption<const BLOCKSIZE: usize, T: BlockCipherDecryption<BLOCKSIZE>> {
     cipher: T,
-    buffer: FixedBuffer<u8, BLOCKSIZE>,
+    buffer: ArrayBuffer<u8, BLOCKSIZE>,
     out: Vec<u8>,
 }
 
@@ -78,7 +103,7 @@ impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryption<B, T>
     pub fn new(cipher: T) -> Self {
         Self {
             cipher,
-            buffer: FixedBuffer::new(),
+            buffer: ArrayBuffer::new(),
             out: Vec::new(),
         }
     }
@@ -108,7 +133,7 @@ impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryption<B, T>
     where
         I: FromIterator<u8>
     {
-        self.buffer = FixedBuffer::new();
+        self.buffer = ArrayBuffer::new();
         std::mem::replace(&mut self.out, Vec::new()).into_iter().collect()
     }
 }
