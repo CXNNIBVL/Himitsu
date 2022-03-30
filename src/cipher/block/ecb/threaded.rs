@@ -2,7 +2,7 @@ use crate::traits::cipher::primitive::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
 };
-use crate::util::{buffer::ArrayBuffer, iopool::IoPool};
+use crate::util::{buffer::FixedBuffer, iopool::IoPool};
 use std::io;
 use std::iter::FromIterator;
 
@@ -10,7 +10,7 @@ type Mutator<const BLOCKSIZE: usize> = IoPool<[u8; BLOCKSIZE], [u8; BLOCKSIZE]>;
 
 pub struct ThreadedEcb<const BLOCKSIZE: usize> {
     mutator: Mutator<BLOCKSIZE>,
-    buffer: ArrayBuffer<u8, BLOCKSIZE>,
+    buffer: FixedBuffer<u8, BLOCKSIZE>,
 }
 
 impl<const B: usize> ThreadedEcb<B> {
@@ -22,7 +22,7 @@ impl<const B: usize> ThreadedEcb<B> {
 
         Self {
             mutator,
-            buffer: ArrayBuffer::new(),
+            buffer: FixedBuffer::new(),
         }
     }
 
@@ -34,7 +34,7 @@ impl<const B: usize> ThreadedEcb<B> {
 
         Self {
             mutator,
-            buffer: ArrayBuffer::new(),
+            buffer: FixedBuffer::new(),
         }
     }
 
@@ -82,7 +82,7 @@ impl<const B: usize> ThreadedEcb<B> {
     pub fn finalize_and_reset<I>(&mut self) -> I
     where I: FromIterator<u8>
     {
-        self.buffer = ArrayBuffer::new();
+        self.buffer = FixedBuffer::new();
         self.mutator.finalize().into_iter().flatten().collect()
     }
 }
