@@ -1,20 +1,26 @@
 use crate::mem;
 use crate::traits::cipher::primitive::BlockCipherPrimitiveDecryption as PrimitiveDecryption;
-use crate::util::{buffer::ArrayBuffer, iopool::IoPool};
+use crate::util::{
+    secure::{
+        ArrayBuffer,
+        Array
+    },
+    iopool::IoPool
+};
 use std::io;
 use std::iter::FromIterator;
 
-struct Transmission<const BLOCKSIZE: usize> {
-    block: [u8; BLOCKSIZE],
-    iv: [u8; BLOCKSIZE],
+struct Transmission<const S: usize> {
+    block: Array<u8, S>,
+    iv: Array<u8, S>
 }
 
-type Mutator<const BLOCKSIZE: usize> = IoPool<Transmission<BLOCKSIZE>, [u8; BLOCKSIZE]>;
+type Mutator<const S: usize> = IoPool<Transmission<S>, Array<u8, S>>;
 
 pub struct ThreadedCbcDecryption<const BLOCKSIZE: usize> {
     mutator: Mutator<BLOCKSIZE>,
     buffer: ArrayBuffer<u8, BLOCKSIZE>,
-    iv: [u8; BLOCKSIZE],
+    iv: Array<u8, BLOCKSIZE>,
 }
 
 impl<const B: usize> ThreadedCbcDecryption<B> {
@@ -25,7 +31,7 @@ impl<const B: usize> ThreadedCbcDecryption<B> {
         Self {
             mutator: Self::mutator(primitive, threads),
             buffer: ArrayBuffer::new(),
-            iv,
+            iv: Array::from(iv)
         }
     }
 
@@ -41,7 +47,7 @@ impl<const B: usize> ThreadedCbcDecryption<B> {
     }
 
     fn process_buffer(&mut self) {
-        let new_iv = ArrayBuffer::from(self.buffer).into();
+        let new_iv = Array::from(self.buffer).into();
 
         let block = self.buffer.extract();
         let iv = std::mem::replace(&mut self.iv, new_iv);

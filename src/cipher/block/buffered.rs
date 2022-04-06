@@ -1,5 +1,6 @@
 use crate::traits::cipher::block::{BlockCipherDecryption, BlockCipherEncryption};
-use crate::util::buffer::ArrayBuffer;
+use crate::util::secure::{ArrayBuffer, Vector};
+use crate::traits::util::buffer::Buffer;
 use std::io;
 use std::iter::FromIterator;
 
@@ -31,7 +32,7 @@ impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryptionProvid
 pub struct BufferedCipherEncryption<const BLOCKSIZE: usize, T: BlockCipherEncryption<BLOCKSIZE>> {
     cipher: T,
     buffer: ArrayBuffer<u8, BLOCKSIZE>,
-    out: Vec<u8>,
+    out: Vector<u8>,
 }
 
 impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryption<B, T> {
@@ -39,7 +40,7 @@ impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryption<B, T>
         Self {
             cipher,
             buffer: ArrayBuffer::new(),
-            out: Vec::new(),
+            out: Vector::new(),
         }
     }
 
@@ -54,7 +55,7 @@ impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryption<B, T>
     fn process_buffer(&mut self) {
         let mut buf = self.buffer.extract();
         self.cipher.encrypt(&mut buf);
-        self.out.extend(buf)
+        self.out.extend(buf.into_iter())
     }
 
     pub fn finalize<I>(self) -> I
@@ -69,7 +70,7 @@ impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryption<B, T>
         I: FromIterator<u8>
     {
         self.buffer = ArrayBuffer::new();
-        std::mem::replace(&mut self.out, Vec::new()).into_iter().collect()
+        std::mem::replace(&mut self.out, Vector::new()).into_iter().collect()
     }
 }
 
@@ -96,7 +97,7 @@ impl<const B: usize, T: BlockCipherEncryption<B>> io::Write for BufferedCipherEn
 pub struct BufferedCipherDecryption<const BLOCKSIZE: usize, T: BlockCipherDecryption<BLOCKSIZE>> {
     cipher: T,
     buffer: ArrayBuffer<u8, BLOCKSIZE>,
-    out: Vec<u8>,
+    out: Vector<u8>,
 }
 
 impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryption<B, T> {
@@ -104,7 +105,7 @@ impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryption<B, T>
         Self {
             cipher,
             buffer: ArrayBuffer::new(),
-            out: Vec::new(),
+            out: Vector::new(),
         }
     }
 
@@ -119,7 +120,7 @@ impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryption<B, T>
     fn process_buffer(&mut self) {
         let mut buf = self.buffer.extract();
         self.cipher.decrypt(&mut buf);
-        self.out.extend(buf)
+        self.out.extend(buf.into_iter())
     }
 
     pub fn finalize<I>(self) -> I
@@ -134,7 +135,7 @@ impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryption<B, T>
         I: FromIterator<u8>
     {
         self.buffer = ArrayBuffer::new();
-        std::mem::replace(&mut self.out, Vec::new()).into_iter().collect()
+        std::mem::replace(&mut self.out, Vector::new()).into_iter().collect()
     }
 }
 

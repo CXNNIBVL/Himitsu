@@ -1,15 +1,15 @@
 pub use conversion::*;
 use std::mem;
 use std::ops::{Deref, DerefMut};
+use super::Array;
 use crate::traits::util::buffer::Buffer;
 
-#[derive(Clone, Copy, Debug)]
 pub struct ArrayBuffer<T, const S: usize>
 where
-    T: Clone + Copy + Default,
+    T: Clone + Copy + Default 
 {
-    buf: [T; S],
-    capacity: usize,
+    buf: Array<T, S>,
+    capacity: usize   
 }
 
 impl<T, const S: usize> Buffer<T> for ArrayBuffer<T, S>
@@ -47,19 +47,19 @@ where
     /// Create a new buffer
     pub fn new() -> Self {
         Self {
-            buf: [T::default(); S],
+            buf: Array::default(),
             capacity: S,
         }
     }
 
     /// Extract the buffers contents and resets the buffer
-    pub fn extract(&mut self) -> [T; S] {
+    pub fn extract(&mut self) -> Array<T, S> {
         self.capacity = S;
-        mem::replace(&mut self.buf, [T::default(); S])
+        mem::replace(&mut self.buf, Array::default())
     }
 
     /// Extract the buffers contents and resets the buffer in place, not resetting the capacity
-    pub fn extract_in_place(&mut self, buf: [T; S]) -> [T; S] {
+    pub fn extract_in_place(&mut self, buf: Array<T, S>) -> Array<T, S> {
         self.capacity = 0;
         mem::replace(&mut self.buf, buf)
     }
@@ -99,14 +99,14 @@ mod conversion {
     impl<T: Clone + Copy + Default, const B: usize> From<[T; B]> for ArrayBuffer<T, B> {
         /// Create a new filled buffer from an array of same type and length
         fn from(buf: [T; B]) -> Self {
-            Self { buf, capacity: 0 }
+            Self { buf: Array::from(buf), capacity: 0 }
         }
     }
 
     impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a [T; B]> for ArrayBuffer<T, B> {
         fn from(buf: &'a [T; B]) -> Self {
             Self {
-                buf: buf.clone(),
+                buf: Array::from(buf.clone()),
                 capacity: 0,
             }
         }
@@ -115,7 +115,7 @@ mod conversion {
     impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a mut [T; B]> for ArrayBuffer<T, B> {
         fn from(buf: &'a mut [T; B]) -> Self {
             Self {
-                buf: buf.clone(),
+                buf: Array::from(buf.clone()),
                 capacity: 0,
             }
         }
