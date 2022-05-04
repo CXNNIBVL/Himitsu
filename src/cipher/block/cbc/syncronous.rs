@@ -46,7 +46,7 @@ impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
 
 impl<T: PrimitiveDecryption<B>, const B: usize> BlockCipherDecryption<B> for CbcDecryption<T, B> {
     fn decrypt(&mut self, data: &mut [u8; B]) {
-        let mut new_iv = Array::default();
+        let mut new_iv = Array::<u8,B>::default();
         new_iv.copy_from_slice(data);
 
         self.primitive.decrypt(data);

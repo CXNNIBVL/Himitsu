@@ -6,36 +6,36 @@ use std::iter::FromIterator;
 
 pub trait BufferedCipherEncryptionProvider<const BLOCKSIZE: usize> {
     type Cipher: BlockCipherEncryption<BLOCKSIZE>;
-    fn buffered(self) -> BufferedCipherEncryption<BLOCKSIZE, Self::Cipher>;
+    fn buffered(self) -> BufferedCipherEncryption<Self::Cipher, BLOCKSIZE>;
 }
 
-impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryptionProvider<B> for T {
+impl<T: BlockCipherEncryption<B>, const B: usize> BufferedCipherEncryptionProvider<B> for T {
     type Cipher = Self;
-    fn buffered(self) -> BufferedCipherEncryption<B, Self::Cipher> {
+    fn buffered(self) -> BufferedCipherEncryption<Self::Cipher, B> {
         BufferedCipherEncryption::new(self)
     }
 }
 
 pub trait BufferedCipherDecryptionProvider<const BLOCKSIZE: usize> {
     type Cipher: BlockCipherDecryption<BLOCKSIZE>;
-    fn buffered(self) -> BufferedCipherDecryption<BLOCKSIZE, Self::Cipher>;
+    fn buffered(self) -> BufferedCipherDecryption<Self::Cipher, BLOCKSIZE>;
 }
 
-impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryptionProvider<B> for T {
+impl<T: BlockCipherDecryption<B>, const B: usize> BufferedCipherDecryptionProvider<B> for T {
     type Cipher = Self;
-    fn buffered(self) -> BufferedCipherDecryption<B, Self::Cipher> {
+    fn buffered(self) -> BufferedCipherDecryption<Self::Cipher, B> {
         BufferedCipherDecryption::new(self)
     }
 }
 
 
-pub struct BufferedCipherEncryption<const BLOCKSIZE: usize, T: BlockCipherEncryption<BLOCKSIZE>> {
+pub struct BufferedCipherEncryption<T: BlockCipherEncryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     cipher: T,
     buffer: ArrayBuffer<u8, BLOCKSIZE>,
     out: Vector<u8>,
 }
 
-impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryption<B, T> {
+impl<T: BlockCipherEncryption<B>, const B: usize> BufferedCipherEncryption<T, B> {
     pub fn new(cipher: T) -> Self {
         Self {
             cipher,
@@ -74,7 +74,7 @@ impl<const B: usize, T: BlockCipherEncryption<B>> BufferedCipherEncryption<B, T>
     }
 }
 
-impl<const B: usize, T: BlockCipherEncryption<B>> io::Write for BufferedCipherEncryption<B, T> {
+impl<T: BlockCipherEncryption<B>, const B: usize> io::Write for BufferedCipherEncryption<T, B> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let mut written = 0;
 
@@ -94,13 +94,13 @@ impl<const B: usize, T: BlockCipherEncryption<B>> io::Write for BufferedCipherEn
     }
 }
 
-pub struct BufferedCipherDecryption<const BLOCKSIZE: usize, T: BlockCipherDecryption<BLOCKSIZE>> {
+pub struct BufferedCipherDecryption<T: BlockCipherDecryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     cipher: T,
     buffer: ArrayBuffer<u8, BLOCKSIZE>,
     out: Vector<u8>,
 }
 
-impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryption<B, T> {
+impl<T: BlockCipherDecryption<B>, const B: usize> BufferedCipherDecryption<T, B> {
     pub fn new(cipher: T) -> Self {
         Self {
             cipher,
@@ -139,7 +139,7 @@ impl<const B: usize, T: BlockCipherDecryption<B>> BufferedCipherDecryption<B, T>
     }
 }
 
-impl<const B: usize, T: BlockCipherDecryption<B>> io::Write for BufferedCipherDecryption<B, T> {
+impl<T: BlockCipherDecryption<B>, const B: usize> io::Write for BufferedCipherDecryption<T, B> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let mut written = 0;
 

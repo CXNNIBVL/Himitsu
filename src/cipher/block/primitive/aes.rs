@@ -183,6 +183,15 @@ pub const AES_192_KEYLEN: usize = 24;
 pub const AES_256_KEYLEN: usize = 32;
 pub type AesBlock = [u8; AES_BLOCKSIZE];
 
+
+// TODO: AES Rewrite to do:
+/*
+    struct Aes<const K: usize> {
+        rounds: usize,
+        key: secure::Array<u8, K>
+    }
+*/
+
 /// Aes Encryption and Decryption provider
 pub struct Aes {
     cfg: AesCfg,

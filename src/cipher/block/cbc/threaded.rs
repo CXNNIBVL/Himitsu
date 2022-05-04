@@ -1,5 +1,6 @@
 use crate::mem;
 use crate::traits::cipher::primitive::BlockCipherPrimitiveDecryption as PrimitiveDecryption;
+use crate::traits::util::buffer::Buffer;
 use crate::util::{
     secure::{
         ArrayBuffer,
@@ -40,16 +41,15 @@ impl<const B: usize> ThreadedCbcDecryption<B> {
         T: PrimitiveDecryption<B> + Send + Sync + 'static,
     {
         Mutator::ordered_with_shared(primitive, threads, |cipher, mut msg| {
-            cipher.decrypt(&mut msg.block);
-            mem::xor_buffers(&mut msg.block, &msg.iv);
+            cipher.decrypt(msg.block.as_mut());
+            mem::xor_buffers(msg.block.as_mut(), msg.iv.as_ref());
             msg.block
         })
     }
 
     fn process_buffer(&mut self) {
-        let new_iv = Array::from(self.buffer).into();
-
         let block = self.buffer.extract();
+        let new_iv = block.clone();
         let iv = std::mem::replace(&mut self.iv, new_iv);
 
         self.mutator.push(Transmission { block, iv });
@@ -75,7 +75,7 @@ impl<const B: usize> ThreadedCbcDecryption<B> {
         I: FromIterator<u8>
     {
         self.buffer = ArrayBuffer::new();
-        self.iv = iv;
+        self.iv = Array::from(iv);
 
         self.mutator.finalize().into_iter().flatten().collect()
     }

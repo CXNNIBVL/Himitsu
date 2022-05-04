@@ -7,20 +7,20 @@ use crate::traits::cipher::{
 };
 use crate::mem;
 
-pub struct CfbEncryption<const BLOCKSIZE: usize, T: PrimitiveEncryption<BLOCKSIZE>> {
+pub struct CfbEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     primitive: T,
     iv: [u8; BLOCKSIZE],
     pos: usize
 }
 
-impl<const B: usize, T: PrimitiveEncryption<B>> CfbEncryption<B,T> {
+impl<T: PrimitiveEncryption<B>, const B: usize> CfbEncryption<T, B> {
     pub fn new(primitive: T, iv: [u8; B]) -> Self {
 
         Self { primitive, iv, pos: B }
     }
 }
 
-impl<const B: usize, T: PrimitiveEncryption<B>> StreamEncryption for CfbEncryption<B,T> {
+impl<T: PrimitiveEncryption<B>, const B: usize> StreamEncryption for CfbEncryption<T, B> {
     fn encrypt(&mut self, data: &mut [u8]) {
 
         let mut encrypted = 0;
@@ -41,20 +41,20 @@ impl<const B: usize, T: PrimitiveEncryption<B>> StreamEncryption for CfbEncrypti
     }
 }
 
-pub struct CfbDecryption<const BLOCKSIZE: usize, T: PrimitiveEncryption<BLOCKSIZE>> {
+pub struct CfbDecryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     primitive: T,
     iv: [u8; BLOCKSIZE],
     pos: usize
 }
 
-impl<const B: usize, T: PrimitiveEncryption<B>> CfbDecryption<B,T> {
+impl<T: PrimitiveEncryption<B>, const B: usize> CfbDecryption<T, B> {
     pub fn new(primitive: T, iv: [u8; B]) -> Self {
 
         Self { primitive, iv, pos: B }
     }
 }
 
-impl<const B: usize, T: PrimitiveEncryption<B>> StreamDecryption for CfbDecryption<B,T> {
+impl<T: PrimitiveEncryption<B>, const B: usize> StreamDecryption for CfbDecryption<T, B> {
     fn decrypt(&mut self, data: &mut [u8]) {
 
         let mut decrypted = 0;

@@ -4,7 +4,8 @@ use std::convert::{AsRef, AsMut};
 use crate::mem;
 
 pub struct Vector<T: Default> {
-    inner: Vec<T>
+    inner: Vec<T>,
+    do_zero: bool
 }
 
 impl<T: Default> Vector<T> {
@@ -52,13 +53,15 @@ impl<T: Default> AsMut<Vec<T>> for Vector<T> {
 
 impl<T: Default> From<Vec<T>> for Vector<T> {
     fn from(v: Vec<T>) -> Self {
-        Self { inner: v }
+        Self { inner: v, do_zero: true }
     }
 }
 
 impl<T: Default> From<Vector<T>> for Vec<T> {
-    fn from(v: Vector<T>) -> Self {
-        v.inner
+    fn from(mut v: Vector<T>) -> Self {
+        let vec = std::mem::replace(&mut v.inner, Vec::default()); 
+        v.do_zero = false;
+        vec
     }
 }
 
@@ -70,6 +73,23 @@ impl<T: Default> Drop for Vector<T> {
 
 impl<T: Default> Default for Vector<T> {
     fn default() -> Self {
-        Self { inner: Vec::default() }
+        Self { inner: Vec::default(), do_zero: true }
+    }
+}
+
+impl<T: Default + Clone> Clone for Vector<T> {
+    fn clone(&self) -> Self {
+        Self { inner: self.inner.clone(), do_zero: true }
+    }
+}
+
+impl<T: Default> IntoIterator for Vector<T> {
+    type Item = T;
+    type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+
+    fn into_iter(mut self) -> Self::IntoIter {
+        let vec = std::mem::replace(&mut self.inner, Vec::default());
+        self.do_zero = false;
+        IntoIterator::into_iter(vec)
     }
 }

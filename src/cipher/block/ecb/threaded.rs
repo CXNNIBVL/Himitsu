@@ -2,6 +2,7 @@ use crate::traits::cipher::primitive::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
 };
+use crate::traits::util::buffer::Buffer;
 use crate::util::{buffer::ArrayBuffer, iopool::IoPool};
 use std::io;
 use std::iter::FromIterator;

@@ -4,24 +4,19 @@ use std::ops::{Deref, DerefMut};
 use super::Array;
 use crate::traits::util::buffer::Buffer;
 
-pub struct ArrayBuffer<T, const S: usize>
-where
-    T: Clone + Copy + Default 
-{
+#[derive(Debug)]
+pub struct ArrayBuffer<T: Default, const S: usize> {
     buf: Array<T, S>,
     capacity: usize   
 }
 
-impl<T, const S: usize> Buffer<T> for ArrayBuffer<T, S>
-where
-    T: Clone + Copy + Default
-{
+impl<T: Default + Clone, const S: usize> Buffer<T> for ArrayBuffer<T, S> {
     fn buffer(&self) -> &[T] {
-        &self.buf
+        self.buf.as_ref()
     }
 
     fn buffer_mut(&mut self) -> &mut [T] {
-        &mut self.buf
+        self.buf.as_mut()
     }
 
     fn capacity(&self) -> usize {
@@ -40,10 +35,7 @@ where
     }
 }
 
-impl<T, const S: usize> ArrayBuffer<T, S>
-where
-    T: Clone + Copy + Default,
-{
+impl<T: Default + Copy, const S: usize> ArrayBuffer<T, S> {
     /// Create a new buffer
     pub fn new() -> Self {
         Self {
@@ -65,29 +57,21 @@ where
     }
 }
 
-impl<T, const S: usize> Default for ArrayBuffer<T, S> 
-where
-    T: Clone + Copy + Default
+impl<T: Default + Copy, const S: usize> Default for ArrayBuffer<T, S>
 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T, const S: usize> Deref for ArrayBuffer<T, S> 
-where
-    T: Clone + Copy + Default 
-{
+impl<T: Default, const S: usize> Deref for ArrayBuffer<T, S> {
     type Target = [T;S];
     fn deref(&self) -> &Self::Target {
         &self.buf
     }
 }
 
-impl<T, const S: usize> DerefMut for ArrayBuffer<T, S> 
-where
-    T: Clone + Copy + Default 
-{
+impl<T: Default, const S: usize> DerefMut for ArrayBuffer<T, S> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.buf
     }
@@ -96,14 +80,14 @@ where
 mod conversion {
     use super::*;
 
-    impl<T: Clone + Copy + Default, const B: usize> From<[T; B]> for ArrayBuffer<T, B> {
+    impl<T: Default, const B: usize> From<[T; B]> for ArrayBuffer<T, B> {
         /// Create a new filled buffer from an array of same type and length
         fn from(buf: [T; B]) -> Self {
             Self { buf: Array::from(buf), capacity: 0 }
         }
     }
 
-    impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a [T; B]> for ArrayBuffer<T, B> {
+    impl<'a, T: Default + Clone, const B: usize> From<&'a [T; B]> for ArrayBuffer<T, B> {
         fn from(buf: &'a [T; B]) -> Self {
             Self {
                 buf: Array::from(buf.clone()),
@@ -112,7 +96,7 @@ mod conversion {
         }
     }
 
-    impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a mut [T; B]> for ArrayBuffer<T, B> {
+    impl<'a, T: Default + Clone, const B: usize> From<&'a mut [T; B]> for ArrayBuffer<T, B> {
         fn from(buf: &'a mut [T; B]) -> Self {
             Self {
                 buf: Array::from(buf.clone()),
@@ -121,9 +105,9 @@ mod conversion {
         }
     }
 
-    impl<T: Clone + Copy + Default, const B: usize> From<ArrayBuffer<T, B>> for [T; B] {
+    impl<T: Default + Copy, const B: usize> From<ArrayBuffer<T, B>> for [T; B] {
         fn from(buf: ArrayBuffer<T, B>) -> [T; B] {
-            buf.buf
+            buf.buf.into()
         }
     }
 }
