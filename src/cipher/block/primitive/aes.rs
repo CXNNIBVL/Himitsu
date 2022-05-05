@@ -5,6 +5,7 @@ use crate::traits::cipher::primitive::{
 };
 
 use crate::mem;
+use crate::util::secure::Vector;
 
 const S_BOX: [u8; 256] = [
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
@@ -183,15 +184,6 @@ pub const AES_192_KEYLEN: usize = 24;
 pub const AES_256_KEYLEN: usize = 32;
 pub type AesBlock = [u8; AES_BLOCKSIZE];
 
-
-// TODO: AES Rewrite to do:
-/*
-    struct Aes<const K: usize> {
-        rounds: usize,
-        key: secure::Array<u8, K>
-    }
-*/
-
 /// Aes Encryption and Decryption provider
 pub struct Aes {
     cfg: AesCfg,
@@ -256,14 +248,14 @@ impl PrimitiveDecryption<AES_BLOCKSIZE> for Aes {
 }
 
 struct AesCfg {
-    expanded_key: Vec<u8>,
+    expanded_key: Vector<u8>,
     rounds: usize,
 }
 
 fn aes_configuration(key: &[u8]) -> AesCfg {
     let (expanded_key, rounds) = key_expansion(key);
     AesCfg {
-        expanded_key,
+        expanded_key: Vector::from(expanded_key),
         rounds,
     }
 }
@@ -304,8 +296,8 @@ fn key_expansion(key: &[u8]) -> (Vec<u8>, usize) {
 
     let mut rcon_iteration = 1;
     let mut bytes_generated = acc_key_len;
+    let mut tmp = [0u8; 4];
     while bytes_generated != capacity {
-        let mut tmp = [0u8; 4];
         tmp.copy_from_slice(&expanded_key[expanded_key.len() - 4..]);
 
         if expanded_key.len() % 16 == 0
@@ -326,6 +318,8 @@ fn key_expansion(key: &[u8]) -> (Vec<u8>, usize) {
         expanded_key.extend(tmp);
         bytes_generated += 4;
     }
+
+    mem::zeroize(&mut tmp);
 
     (expanded_key, rounds)
 }
@@ -382,6 +376,7 @@ fn mix_columns_enc(state: &mut [u8]) {
     tmp[15] = MUL3[state[12] as usize] ^ state[13] ^ state[14] ^ MUL2[state[15] as usize];
 
     state.copy_from_slice(&tmp);
+    mem::zeroize(&mut tmp);
 }
 
 fn sub_bytes_dec(state: &mut [u8]) {
@@ -478,6 +473,7 @@ fn mix_columns_dec(state: &mut [u8]) {
         ^ MUL14[state[15] as usize];
 
     state.copy_from_slice(&tmp);
+    mem::zeroize(&mut tmp);
 }
 
 #[cfg(test)]

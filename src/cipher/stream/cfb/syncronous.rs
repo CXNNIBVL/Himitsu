@@ -6,17 +6,18 @@ use crate::traits::cipher::{
     primitive::BlockCipherPrimitiveEncryption as PrimitiveEncryption
 };
 use crate::mem;
+use crate::util::secure::Array;
 
 pub struct CfbEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     primitive: T,
-    iv: [u8; BLOCKSIZE],
+    iv: Array<u8, BLOCKSIZE>,
     pos: usize
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> CfbEncryption<T, B> {
     pub fn new(primitive: T, iv: [u8; B]) -> Self {
 
-        Self { primitive, iv, pos: B }
+        Self { primitive, iv: Array::from(iv), pos: B }
     }
 }
 
@@ -43,14 +44,14 @@ impl<T: PrimitiveEncryption<B>, const B: usize> StreamEncryption for CfbEncrypti
 
 pub struct CfbDecryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     primitive: T,
-    iv: [u8; BLOCKSIZE],
+    iv: Array<u8, BLOCKSIZE>,
     pos: usize
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> CfbDecryption<T, B> {
     pub fn new(primitive: T, iv: [u8; B]) -> Self {
 
-        Self { primitive, iv, pos: B }
+        Self { primitive, iv: Array::from(iv), pos: B }
     }
 }
 

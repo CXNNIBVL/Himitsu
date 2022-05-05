@@ -64,14 +64,6 @@ impl<T: BlockCipherEncryption<B>, const B: usize> BufferedCipherEncryption<T, B>
     {
         self.out.into_iter().collect()
     }
-
-    pub fn finalize_and_reset<I>(&mut self) -> I
-    where
-        I: FromIterator<u8>
-    {
-        self.buffer = ArrayBuffer::new();
-        std::mem::replace(&mut self.out, Vector::new()).into_iter().collect()
-    }
 }
 
 impl<T: BlockCipherEncryption<B>, const B: usize> io::Write for BufferedCipherEncryption<T, B> {
@@ -128,14 +120,6 @@ impl<T: BlockCipherDecryption<B>, const B: usize> BufferedCipherDecryption<T, B>
         I: FromIterator<u8>,
     {
         self.out.into_iter().collect()
-    }
-
-    pub fn finalize_and_reset<I>(&mut self) -> I
-    where
-        I: FromIterator<u8>
-    {
-        self.buffer = ArrayBuffer::new();
-        std::mem::replace(&mut self.out, Vector::new()).into_iter().collect()
     }
 }
 

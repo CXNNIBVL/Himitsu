@@ -69,16 +69,6 @@ impl<const B: usize> ThreadedCbcDecryption<B> {
     {
         self.mutator.finalize().into_iter().flatten().collect()
     }
-
-    pub fn finalize_and_reset<I>(&mut self, iv: [u8; B]) -> I
-    where
-        I: FromIterator<u8>
-    {
-        self.buffer = ArrayBuffer::new();
-        self.iv = Array::from(iv);
-
-        self.mutator.finalize().into_iter().flatten().collect()
-    }
 }
 
 impl<const B: usize> io::Write for ThreadedCbcDecryption<B> {
