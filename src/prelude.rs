@@ -5,8 +5,7 @@ pub use crate::traits::{
     },
     cipher::primitive::{
         BlockCipherPrimitiveEncryption, 
-        BlockCipherPrimitiveDecryption, 
-        BlockCipherPrimitiveInfo
+        BlockCipherPrimitiveDecryption
     },
     cipher::stream::{
         StreamCipherEncryption,

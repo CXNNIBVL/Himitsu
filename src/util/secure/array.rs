@@ -76,13 +76,13 @@ impl<T: Default, const S: usize> Drop for Array<T, S> {
 
 impl<T: Default + Copy, const S: usize> Default for Array<T, S> {
     fn default() -> Self {
-        Self { inner: [T::default(); S], do_zero: false }
+        Self { inner: [T::default(); S], do_zero: true }
     }
 }
 
 impl<T: Default + Clone, const S: usize> Clone for Array<T, S> {
     fn clone(&self) -> Self {
-        Self { inner: self.inner.clone(), do_zero: false }
+        Self { inner: self.inner.clone(), do_zero: true }
     }
 }
 

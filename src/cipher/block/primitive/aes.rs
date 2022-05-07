@@ -1,11 +1,10 @@
 use crate::traits::cipher::primitive::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
-    BlockCipherPrimitiveEncryption as PrimitiveEncryption,
-    BlockCipherPrimitiveInfo as PrimitiveInfo,
+    BlockCipherPrimitiveEncryption as PrimitiveEncryption
 };
 
 use crate::mem;
-use crate::util::secure::Vector;
+use crate::util::secure::Array;
 
 const S_BOX: [u8; 256] = [
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
@@ -179,84 +178,39 @@ const RCON: [u8; 256] = [
 ];
 
 pub const AES_BLOCKSIZE: usize = 16;
+
 pub const AES_128_KEYLEN: usize = 16;
 pub const AES_192_KEYLEN: usize = 24;
 pub const AES_256_KEYLEN: usize = 32;
-pub type AesBlock = [u8; AES_BLOCKSIZE];
 
-/// Aes Encryption and Decryption provider
-pub struct Aes {
-    cfg: AesCfg,
-}
+pub const AES_128_EXPANDED_KEYLEN: usize = (AES_128_ROUNDS + 1) * AES_BLOCKSIZE;
+pub const AES_192_EXPANDED_KEYLEN: usize = (AES_192_ROUNDS + 1) * AES_BLOCKSIZE;
+pub const AES_256_EXPANDED_KEYLEN: usize = (AES_256_ROUNDS + 1) * AES_BLOCKSIZE;
 
-impl Aes {
-    /// Create a new Aes instance
-    pub fn new(key: &[u8]) -> Self {
-        Self {
-            cfg: aes_configuration(key),
-        }
+pub const AES_128_ROUNDS: usize = 10;
+pub const AES_192_ROUNDS: usize = 12;
+pub const AES_256_ROUNDS: usize = 14;
+
+pub type Block = [u8; AES_BLOCKSIZE];
+
+pub struct Aes128;
+impl Aes128 {
+    pub fn new(key: [u8; AES_128_KEYLEN]) -> Aes<AES_128_EXPANDED_KEYLEN> {
+        Aes::new(key_expansion(key))
     }
 }
 
-impl PrimitiveInfo for Aes {
-    const BLOCKSIZE: usize = AES_BLOCKSIZE;
-    const KEYLEN_MIN: usize = AES_128_KEYLEN;
-    const KEYLEN_MAX: usize = AES_256_KEYLEN;
-}
-
-impl PrimitiveEncryption<AES_BLOCKSIZE> for Aes {
-    fn encrypt(&self, state: &mut AesBlock) {
-        add_roundkey(state.as_mut(), &self.cfg.expanded_key[0..16]);
-
-        for i in 0..self.cfg.rounds - 1 {
-            sub_bytes_enc(state.as_mut());
-            shift_rows_enc(state.as_mut());
-            mix_columns_enc(state.as_mut());
-
-            let start = 16 * (i + 1);
-            let end = start + 16;
-            add_roundkey(state.as_mut(), &self.cfg.expanded_key[start..end]);
-        }
-
-        sub_bytes_enc(state.as_mut());
-        shift_rows_enc(state.as_mut());
-
-        let index = self.cfg.expanded_key.len() - 16;
-        add_roundkey(state.as_mut(), &self.cfg.expanded_key[index..]);
+pub struct Aes192;
+impl Aes192 {
+    pub fn new(key: [u8; AES_192_KEYLEN]) -> Aes<AES_192_EXPANDED_KEYLEN> {
+        Aes::new(key_expansion(key))
     }
 }
 
-impl PrimitiveDecryption<AES_BLOCKSIZE> for Aes {
-    fn decrypt(&self, state: &mut AesBlock) {
-        let index = self.cfg.expanded_key.len() - 16;
-        add_roundkey(state.as_mut(), &self.cfg.expanded_key[index..]);
-        sub_bytes_dec(state.as_mut());
-        shift_rows_dec(state.as_mut());
-
-        for i in (0..self.cfg.rounds - 1).rev() {
-            let start = 16 * (i + 1);
-            let end = start + 16;
-            add_roundkey(state.as_mut(), &self.cfg.expanded_key[start..end]);
-
-            mix_columns_dec(state.as_mut());
-            sub_bytes_dec(state.as_mut());
-            shift_rows_dec(state.as_mut());
-        }
-
-        add_roundkey(state.as_mut(), &self.cfg.expanded_key[0..16]);
-    }
-}
-
-struct AesCfg {
-    expanded_key: Vector<u8>,
-    rounds: usize,
-}
-
-fn aes_configuration(key: &[u8]) -> AesCfg {
-    let (expanded_key, rounds) = key_expansion(key);
-    AesCfg {
-        expanded_key: Vector::from(expanded_key),
-        rounds,
+pub struct Aes256;
+impl Aes256 {
+    pub fn new(key: [u8; AES_256_KEYLEN]) -> Aes<AES_256_EXPANDED_KEYLEN> {
+        Aes::new(key_expansion(key))
     }
 }
 
@@ -274,54 +228,106 @@ fn key_expansion_rcon(k: &mut [u8; 4], iteration: usize) {
     k[0] ^= RCON[iteration];
 }
 
-/// Returns the expanded key and the number of rounds
-fn key_expansion(key: &[u8]) -> (Vec<u8>, usize) {
-    let (rounds, copy, acc_key_len) = match key.len() {
-        0..=AES_128_KEYLEN => (10, key.len(), AES_128_KEYLEN),
+fn key_expansion<const IN_LEN: usize, const OUT_LEN: usize>(key: [u8; IN_LEN]) -> Array<u8, OUT_LEN> {
 
-        17..=AES_192_KEYLEN => (12, key.len(), AES_192_KEYLEN),
+    let mut expanded_key: Array<u8, OUT_LEN> = Array::default();
+    let mut bytes_generated = 0;
 
-        25..=AES_256_KEYLEN => (14, key.len(), AES_256_KEYLEN),
-
-        _ => (14, AES_256_KEYLEN, AES_256_KEYLEN),
-    };
-
-    let capacity = (rounds + 1) * AES_BLOCKSIZE;
-    let mut expanded_key = Vec::with_capacity(capacity);
-    expanded_key.extend(&key[0..copy]);
-
-    while expanded_key.len() != acc_key_len {
-        expanded_key.push(0);
+    for by in key {
+        expanded_key[bytes_generated] = by;
+        bytes_generated += 1;
     }
 
     let mut rcon_iteration = 1;
-    let mut bytes_generated = acc_key_len;
-    let mut tmp = [0u8; 4];
-    while bytes_generated != capacity {
-        tmp.copy_from_slice(&expanded_key[expanded_key.len() - 4..]);
+    let mut tmp: Array<u8, 4> = Array::default();
 
-        if expanded_key.len() % 16 == 0
-            && expanded_key.len() % 32 != 0
-            && capacity == 15 * AES_BLOCKSIZE
+    while bytes_generated < OUT_LEN {
+        tmp.copy_from_slice(&expanded_key[bytes_generated - 4..bytes_generated]);
+
+        if bytes_generated % 16 == 0
+            && bytes_generated % 32 != 0
+            && OUT_LEN == AES_256_EXPANDED_KEYLEN
         {
             key_expansion_gcon(&mut tmp);
         }
 
-        if expanded_key.len() % acc_key_len == 0 {
+        if bytes_generated % IN_LEN == 0 {
             key_expansion_rcon(&mut tmp, rcon_iteration);
             rcon_iteration += 1;
         }
 
-        let ix = expanded_key.len() - acc_key_len;
-        mem::xor_buffers_unchecked(&mut tmp, &expanded_key[ix..ix + 4]);
+        let ix = bytes_generated - IN_LEN;
+        mem::xor_buffers_unchecked(tmp.as_mut(), &expanded_key[ix..ix + 4]);
 
-        expanded_key.extend(tmp);
-        bytes_generated += 4;
+        for i in 0..4 {
+            expanded_key[bytes_generated] = tmp[i];
+            bytes_generated += 1;
+        }
     }
 
-    mem::zeroize(&mut tmp);
+    expanded_key
+}
 
-    (expanded_key, rounds)
+/// Aes Encryption and Decryption provider
+pub struct Aes<const EXPANDED_LEN: usize> {
+    rounds: usize,
+    key: Array<u8, EXPANDED_LEN>
+}
+
+impl<const E: usize> Aes<E> {
+    fn new(key: Array<u8, E>) -> Self {
+        Self { rounds: (E / AES_BLOCKSIZE) - 1, key }
+    }
+}
+
+// Returns start, end of keyindex, of a given round
+fn key_index(round: usize) -> (usize, usize) {
+    let start = round * AES_BLOCKSIZE;
+    let end = start + AES_BLOCKSIZE;
+
+    (start, end)
+}
+
+fn roundkey(expanded_key: &[u8], round: usize) -> &[u8] {
+    let (start, end) = key_index(round);
+    &expanded_key[start..end]
+}
+
+impl<const E: usize> PrimitiveEncryption<AES_BLOCKSIZE> for Aes<E> {
+    fn encrypt(&self, state: &mut Block) {
+        add_roundkey(state.as_mut(), roundkey(self.key.as_ref(), 0));
+
+        for round in 1..self.rounds {
+            sub_bytes_enc(state.as_mut());
+            shift_rows_enc(state.as_mut());
+            mix_columns_enc(state.as_mut());
+
+            add_roundkey(state.as_mut(), roundkey(self.key.as_ref(), round));
+        }
+
+        sub_bytes_enc(state.as_mut());
+        shift_rows_enc(state.as_mut());
+
+        add_roundkey(state.as_mut(), roundkey(self.key.as_ref(), self.rounds));
+    }
+}
+
+impl<const E: usize> PrimitiveDecryption<AES_BLOCKSIZE> for Aes<E> {
+    fn decrypt(&self, state: &mut Block) {
+        add_roundkey(state.as_mut(), roundkey(self.key.as_ref(), self.rounds));
+        sub_bytes_dec(state.as_mut());
+        shift_rows_dec(state.as_mut());
+
+        for round in (1..self.rounds).rev() {
+            add_roundkey(state.as_mut(), roundkey(self.key.as_ref(), round));
+
+            mix_columns_dec(state.as_mut());
+            sub_bytes_dec(state.as_mut());
+            shift_rows_dec(state.as_mut());
+        }
+
+        add_roundkey(state.as_mut(), roundkey(self.key.as_ref(), 0));
+    }
 }
 
 /// Xor round key into state
@@ -353,7 +359,7 @@ fn shift_rows_enc(state: &mut [u8]) {
 }
 
 fn mix_columns_enc(state: &mut [u8]) {
-    let mut tmp = [0u8; 16];
+    let mut tmp: Array<u8, AES_BLOCKSIZE> = Array::default();
 
     tmp[0] = MUL2[state[0] as usize] ^ MUL3[state[1] as usize] ^ state[2] ^ state[3];
     tmp[1] = state[0] ^ MUL2[state[1] as usize] ^ MUL3[state[2] as usize] ^ state[3];
@@ -375,8 +381,7 @@ fn mix_columns_enc(state: &mut [u8]) {
     tmp[14] = state[12] ^ state[13] ^ MUL2[state[14] as usize] ^ MUL3[state[15] as usize];
     tmp[15] = MUL3[state[12] as usize] ^ state[13] ^ state[14] ^ MUL2[state[15] as usize];
 
-    state.copy_from_slice(&tmp);
-    mem::zeroize(&mut tmp);
+    state.copy_from_slice(tmp.as_ref());
 }
 
 fn sub_bytes_dec(state: &mut [u8]) {
@@ -402,7 +407,7 @@ fn shift_rows_dec(state: &mut [u8]) {
 }
 
 fn mix_columns_dec(state: &mut [u8]) {
-    let mut tmp = [0u8; 16];
+    let mut tmp: Array<u8, AES_BLOCKSIZE> = Array::default();
 
     tmp[0] = MUL14[state[0] as usize]
         ^ MUL11[state[1] as usize]
@@ -472,8 +477,7 @@ fn mix_columns_dec(state: &mut [u8]) {
         ^ MUL9[state[14] as usize]
         ^ MUL14[state[15] as usize];
 
-    state.copy_from_slice(&tmp);
-    mem::zeroize(&mut tmp);
+    state.copy_from_slice(tmp.as_ref());
 }
 
 #[cfg(test)]
@@ -484,6 +488,13 @@ mod tests {
     fn decode(s: &str) -> Vec<u8> {
         use crate::encode::HexEncoder;
         HexEncoder::builder().decode(s)
+    }
+
+    fn decode_into_array<const B: usize>(s: &str) -> [u8; B] {
+        use std::convert::TryInto;
+        decode(s).try_into().unwrap_or_else(|v: Vec<u8>| {
+            panic!("Expected a Vec of length {} but it was {}", B, v.len())
+        })
     }
 
     #[test]
@@ -501,10 +512,10 @@ mod tests {
 		b1 d4 d8 e2 8a 7d b9 da 1d 7b b3 de 4c 66 49 41 
 		b4 ef 5b cb 3e 92 e2 11 23 e9 51 cf 6f 8f 18 8e";
 
-        let (key, expected) = (decode(key_str), decode(expected_str));
-        let (expanded, _) = key_expansion(&key);
+        let (key, expected) = (decode_into_array::<AES_128_KEYLEN>(key_str), decode(expected_str));
+        let expanded: Array<u8, AES_128_EXPANDED_KEYLEN> = key_expansion(key);
 
-        assert_eq!(expanded, expected);
+        assert_eq!(expanded.as_slice(), expected.as_slice());
     }
 
     #[test]
@@ -524,10 +535,10 @@ mod tests {
 		0a f3 1f a7 4a 8b 86 61 13 7b 88 5f f2 72 c7 ca 
 		43 2a c8 86 d8 34 c0 b6 d2 c7 df 11 98 4c 59 70";
 
-        let (key, expected) = (decode(key_str), decode(expected_str));
-        let (expanded, _) = key_expansion(&key);
+        let (key, expected) = (decode_into_array::<AES_192_KEYLEN>(key_str), decode(expected_str));
+        let expanded: Array<u8, AES_192_EXPANDED_KEYLEN> = key_expansion(key);
 
-        assert_eq!(expanded, expected);
+        assert_eq!(expanded.as_slice(), expected.as_slice());
     }
 
     #[test]
@@ -549,35 +560,10 @@ mod tests {
 		74 ed 0b a1 73 9b 7e 25 22 51 ad 14 ce 20 d4 3b 
 		10 f8 0a 17 53 bf 72 9c 45 c9 79 e7 cb 70 63 85 ";
 
-        let (key, expected) = (decode(key_str), decode(expected_str));
-        let (expanded, _) = key_expansion(&key);
+        let (key, expected) = (decode_into_array::<AES_256_KEYLEN>(key_str), decode(expected_str));
+        let expanded: Array<u8, AES_256_EXPANDED_KEYLEN> = key_expansion(key);
 
-        assert_eq!(expanded, expected);
-    }
-
-    #[test]
-    fn test_key_expansion_bigger_32byte() {
-        let key_str = "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00";
-        let expected_str = "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-		62 63 63 63 62 63 63 63 62 63 63 63 62 63 63 63 
-		aa fb fb fb aa fb fb fb aa fb fb fb aa fb fb fb 
-		6f 6c 6c cf 0d 0f 0f ac 6f 6c 6c cf 0d 0f 0f ac 
-		7d 8d 8d 6a d7 76 76 91 7d 8d 8d 6a d7 76 76 91 
-		53 54 ed c1 5e 5b e2 6d 31 37 8e a2 3c 38 81 0e 
-		96 8a 81 c1 41 fc f7 50 3c 71 7a 3a eb 07 0c ab 
-		9e aa 8f 28 c0 f1 6d 45 f1 c6 e3 e7 cd fe 62 e9 
-		2b 31 2b df 6a cd dc 8f 56 bc a6 b5 bd bb aa 1e 
-		64 06 fd 52 a4 f7 90 17 55 31 73 f0 98 cf 11 19 
-		6d bb a9 0b 07 76 75 84 51 ca d3 31 ec 71 79 2f 
-		e7 b0 e8 9c 43 47 78 8b 16 76 0b 7b 8e b9 1a 62 
-		74 ed 0b a1 73 9b 7e 25 22 51 ad 14 ce 20 d4 3b 
-		10 f8 0a 17 53 bf 72 9c 45 c9 79 e7 cb 70 63 85 ";
-
-        let (key, expected) = (decode(key_str), decode(expected_str));
-        let (expanded, _) = key_expansion(&key);
-
-        assert_eq!(expanded, expected);
+        assert_eq!(expanded.as_slice(), expected.as_slice());
     }
 
     #[test]
