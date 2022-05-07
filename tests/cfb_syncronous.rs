@@ -4,11 +4,11 @@ mod common;
 mod tests {
 
     use super::common::{decode, decode_into_array};
-    use himitsu::prelude::*;
     use himitsu::cipher::{
         block::primitive::aes,
-        stream::cfb::{CfbEncryptionProvider, CfbDecryptionProvider}
+        stream::cfb::{CfbDecryptionProvider, CfbEncryptionProvider},
     };
+    use himitsu::prelude::*;
 
     macro_rules! cfb_test_enc {
         (
@@ -81,5 +81,4 @@ mod tests {
         "3B3FD92E B72DAD20 333449F8 E83CFB4A C8A64537 A0B3A93F CDE3CDAD 9F1CE58B 26751F67 A3CBB140 B1808CF1 87A4F4DF C04B0535 7C5D1C0E EAC4C66F 9FF7F2E6",
         "6BC1BEE2 2E409F96 E93D7E11 7393172A AE2D8A57 1E03AC9C 9EB76FAC 45AF8E51 30C81C46 A35CE411 E5FBC119 1A0A52EF F69F2445 DF4F9B17 AD2B417B E66C3710"
     );
-
 }

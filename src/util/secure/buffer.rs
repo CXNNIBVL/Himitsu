@@ -1,13 +1,13 @@
+use super::Array;
+use crate::traits::util::buffer::Buffer;
 pub use conversion::*;
 use std::mem;
 use std::ops::{Deref, DerefMut};
-use super::Array;
-use crate::traits::util::buffer::Buffer;
 
 #[derive(Debug)]
 pub struct ArrayBuffer<T: Default, const S: usize> {
     buf: Array<T, S>,
-    capacity: usize   
+    capacity: usize,
 }
 
 impl<T: Default + Clone, const S: usize> Buffer<T> for ArrayBuffer<T, S> {
@@ -23,7 +23,7 @@ impl<T: Default + Clone, const S: usize> Buffer<T> for ArrayBuffer<T, S> {
         self.capacity
     }
 
-     fn push(&mut self, element: T) -> bool {
+    fn push(&mut self, element: T) -> bool {
         if self.capacity == 0 {
             return false;
         }
@@ -57,15 +57,14 @@ impl<T: Default + Copy, const S: usize> ArrayBuffer<T, S> {
     }
 }
 
-impl<T: Default + Copy, const S: usize> Default for ArrayBuffer<T, S>
-{
+impl<T: Default + Copy, const S: usize> Default for ArrayBuffer<T, S> {
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl<T: Default, const S: usize> Deref for ArrayBuffer<T, S> {
-    type Target = [T;S];
+    type Target = [T; S];
     fn deref(&self) -> &Self::Target {
         &self.buf
     }
@@ -83,7 +82,10 @@ mod conversion {
     impl<T: Default, const B: usize> From<[T; B]> for ArrayBuffer<T, B> {
         /// Create a new filled buffer from an array of same type and length
         fn from(buf: [T; B]) -> Self {
-            Self { buf: Array::from(buf), capacity: 0 }
+            Self {
+                buf: Array::from(buf),
+                capacity: 0,
+            }
         }
     }
 

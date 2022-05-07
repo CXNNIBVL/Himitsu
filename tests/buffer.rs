@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
 
-    use himitsu::util::buffer::ArrayBuffer;
     use himitsu::traits::util::buffer::Buffer;
+    use himitsu::util::buffer::ArrayBuffer;
 
     #[test]
     fn test_push() {

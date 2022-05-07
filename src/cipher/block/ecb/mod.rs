@@ -1,12 +1,12 @@
 pub mod syncronous;
 pub mod threaded;
 
-use syncronous::*;
-use threaded::*;
 use crate::traits::cipher::primitive::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
 };
+use syncronous::*;
+use threaded::*;
 
 pub trait EcbEncryptionProvider<const BLOCKSIZE: usize> {
     type Primitive: PrimitiveEncryption<BLOCKSIZE>;

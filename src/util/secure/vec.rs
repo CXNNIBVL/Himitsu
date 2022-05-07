@@ -1,11 +1,11 @@
-use std::ops::{Deref, DerefMut, Drop};
-use std::borrow::{Borrow, BorrowMut};
-use std::convert::{AsRef, AsMut};
 use crate::mem;
+use std::borrow::{Borrow, BorrowMut};
+use std::convert::{AsMut, AsRef};
+use std::ops::{Deref, DerefMut, Drop};
 
 pub struct Vector<T: Default> {
     inner: Vec<T>,
-    do_zero: bool
+    do_zero: bool,
 }
 
 impl<T: Default> Vector<T> {
@@ -53,13 +53,16 @@ impl<T: Default> AsMut<Vec<T>> for Vector<T> {
 
 impl<T: Default> From<Vec<T>> for Vector<T> {
     fn from(v: Vec<T>) -> Self {
-        Self { inner: v, do_zero: true }
+        Self {
+            inner: v,
+            do_zero: true,
+        }
     }
 }
 
 impl<T: Default> From<Vector<T>> for Vec<T> {
     fn from(mut v: Vector<T>) -> Self {
-        let vec = std::mem::replace(&mut v.inner, Vec::default()); 
+        let vec = std::mem::replace(&mut v.inner, Vec::default());
         v.do_zero = false;
         vec
     }
@@ -73,13 +76,19 @@ impl<T: Default> Drop for Vector<T> {
 
 impl<T: Default> Default for Vector<T> {
     fn default() -> Self {
-        Self { inner: Vec::default(), do_zero: true }
+        Self {
+            inner: Vec::default(),
+            do_zero: true,
+        }
     }
 }
 
 impl<T: Default + Clone> Clone for Vector<T> {
     fn clone(&self) -> Self {
-        Self { inner: self.inner.clone(), do_zero: true }
+        Self {
+            inner: self.inner.clone(),
+            do_zero: true,
+        }
     }
 }
 

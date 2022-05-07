@@ -4,11 +4,8 @@ mod common;
 mod tests {
     use super::common::{decode, decode_into_array};
     use himitsu::cipher::block::{
+        ecb::{ThreadedEcbDecryptionProvider, ThreadedEcbEncryptionProvider},
         primitive::aes,
-        ecb::{
-            ThreadedEcbEncryptionProvider, 
-            ThreadedEcbDecryptionProvider
-        }
     };
     use std::io::Write;
 

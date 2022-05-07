@@ -1,10 +1,10 @@
 pub trait Buffer<T>
-    where
-        T: Clone
+where
+    T: Clone,
 {
     fn buffer(&self) -> &[T];
     fn buffer_mut(&mut self) -> &mut [T];
-    
+
     /// Returns the length of the buffer
     fn len(&self) -> usize {
         self.buffer().len()

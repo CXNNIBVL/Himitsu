@@ -1,6 +1,6 @@
 use crate::traits::cipher::primitive::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
-    BlockCipherPrimitiveEncryption as PrimitiveEncryption
+    BlockCipherPrimitiveEncryption as PrimitiveEncryption,
 };
 
 use crate::mem;
@@ -183,13 +183,13 @@ pub const AES_128_KEYLEN: usize = 16;
 pub const AES_192_KEYLEN: usize = 24;
 pub const AES_256_KEYLEN: usize = 32;
 
-pub const AES_128_EXPANDED_KEYLEN: usize = (AES_128_ROUNDS + 1) * AES_BLOCKSIZE;
-pub const AES_192_EXPANDED_KEYLEN: usize = (AES_192_ROUNDS + 1) * AES_BLOCKSIZE;
-pub const AES_256_EXPANDED_KEYLEN: usize = (AES_256_ROUNDS + 1) * AES_BLOCKSIZE;
+const AES_128_EXPANDED_KEYLEN: usize = (AES_128_ROUNDS + 1) * AES_BLOCKSIZE;
+const AES_192_EXPANDED_KEYLEN: usize = (AES_192_ROUNDS + 1) * AES_BLOCKSIZE;
+const AES_256_EXPANDED_KEYLEN: usize = (AES_256_ROUNDS + 1) * AES_BLOCKSIZE;
 
-pub const AES_128_ROUNDS: usize = 10;
-pub const AES_192_ROUNDS: usize = 12;
-pub const AES_256_ROUNDS: usize = 14;
+const AES_128_ROUNDS: usize = 10;
+const AES_192_ROUNDS: usize = 12;
+const AES_256_ROUNDS: usize = 14;
 
 pub type Block = [u8; AES_BLOCKSIZE];
 
@@ -228,8 +228,9 @@ fn key_expansion_rcon(k: &mut [u8; 4], iteration: usize) {
     k[0] ^= RCON[iteration];
 }
 
-fn key_expansion<const IN_LEN: usize, const OUT_LEN: usize>(key: [u8; IN_LEN]) -> Array<u8, OUT_LEN> {
-
+fn key_expansion<const IN_LEN: usize, const OUT_LEN: usize>(
+    key: [u8; IN_LEN],
+) -> Array<u8, OUT_LEN> {
     let mut expanded_key: Array<u8, OUT_LEN> = Array::default();
     let mut bytes_generated = 0;
 
@@ -271,12 +272,15 @@ fn key_expansion<const IN_LEN: usize, const OUT_LEN: usize>(key: [u8; IN_LEN]) -
 /// Aes Encryption and Decryption provider
 pub struct Aes<const EXPANDED_LEN: usize> {
     rounds: usize,
-    key: Array<u8, EXPANDED_LEN>
+    key: Array<u8, EXPANDED_LEN>,
 }
 
 impl<const E: usize> Aes<E> {
     fn new(key: Array<u8, E>) -> Self {
-        Self { rounds: (E / AES_BLOCKSIZE) - 1, key }
+        Self {
+            rounds: (E / AES_BLOCKSIZE) - 1,
+            key,
+        }
     }
 }
 
@@ -512,7 +516,10 @@ mod tests {
 		b1 d4 d8 e2 8a 7d b9 da 1d 7b b3 de 4c 66 49 41 
 		b4 ef 5b cb 3e 92 e2 11 23 e9 51 cf 6f 8f 18 8e";
 
-        let (key, expected) = (decode_into_array::<AES_128_KEYLEN>(key_str), decode(expected_str));
+        let (key, expected) = (
+            decode_into_array::<AES_128_KEYLEN>(key_str),
+            decode(expected_str),
+        );
         let expanded: Array<u8, AES_128_EXPANDED_KEYLEN> = key_expansion(key);
 
         assert_eq!(expanded.as_slice(), expected.as_slice());
@@ -535,7 +542,10 @@ mod tests {
 		0a f3 1f a7 4a 8b 86 61 13 7b 88 5f f2 72 c7 ca 
 		43 2a c8 86 d8 34 c0 b6 d2 c7 df 11 98 4c 59 70";
 
-        let (key, expected) = (decode_into_array::<AES_192_KEYLEN>(key_str), decode(expected_str));
+        let (key, expected) = (
+            decode_into_array::<AES_192_KEYLEN>(key_str),
+            decode(expected_str),
+        );
         let expanded: Array<u8, AES_192_EXPANDED_KEYLEN> = key_expansion(key);
 
         assert_eq!(expanded.as_slice(), expected.as_slice());
@@ -560,7 +570,10 @@ mod tests {
 		74 ed 0b a1 73 9b 7e 25 22 51 ad 14 ce 20 d4 3b 
 		10 f8 0a 17 53 bf 72 9c 45 c9 79 e7 cb 70 63 85 ";
 
-        let (key, expected) = (decode_into_array::<AES_256_KEYLEN>(key_str), decode(expected_str));
+        let (key, expected) = (
+            decode_into_array::<AES_256_KEYLEN>(key_str),
+            decode(expected_str),
+        );
         let expanded: Array<u8, AES_256_EXPANDED_KEYLEN> = key_expansion(key);
 
         assert_eq!(expanded.as_slice(), expected.as_slice());

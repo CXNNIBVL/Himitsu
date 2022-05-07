@@ -2,18 +2,15 @@ use crate::mem;
 use crate::traits::cipher::primitive::BlockCipherPrimitiveDecryption as PrimitiveDecryption;
 use crate::traits::util::buffer::Buffer;
 use crate::util::{
-    secure::{
-        ArrayBuffer,
-        Array
-    },
-    iopool::IoPool
+    iopool::IoPool,
+    secure::{Array, ArrayBuffer},
 };
 use std::io;
 use std::iter::FromIterator;
 
 struct Transmission<const S: usize> {
     block: Array<u8, S>,
-    iv: Array<u8, S>
+    iv: Array<u8, S>,
 }
 
 type Mutator<const S: usize> = IoPool<Transmission<S>, Array<u8, S>>;
@@ -32,7 +29,7 @@ impl<const B: usize> ThreadedCbcDecryption<B> {
         Self {
             mutator: Self::mutator(primitive, threads),
             buffer: ArrayBuffer::new(),
-            iv: Array::from(iv)
+            iv: Array::from(iv),
         }
     }
 

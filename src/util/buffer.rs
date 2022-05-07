@@ -1,7 +1,7 @@
+use crate::traits::util::buffer::Buffer;
 pub use conversion::*;
 use std::mem;
 use std::ops::{Deref, DerefMut};
-use crate::traits::util::buffer::Buffer;
 
 #[derive(Clone, Copy, Debug)]
 pub struct ArrayBuffer<T, const S: usize>
@@ -14,7 +14,7 @@ where
 
 impl<T, const S: usize> Buffer<T> for ArrayBuffer<T, S>
 where
-    T: Clone + Copy + Default
+    T: Clone + Copy + Default,
 {
     fn buffer(&self) -> &[T] {
         &self.buf
@@ -28,7 +28,7 @@ where
         self.capacity
     }
 
-     fn push(&mut self, element: T) -> bool {
+    fn push(&mut self, element: T) -> bool {
         if self.capacity == 0 {
             return false;
         }
@@ -65,28 +65,28 @@ where
     }
 }
 
-impl<T, const S: usize> Default for ArrayBuffer<T, S> 
+impl<T, const S: usize> Default for ArrayBuffer<T, S>
 where
-    T: Clone + Copy + Default
+    T: Clone + Copy + Default,
 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T, const S: usize> Deref for ArrayBuffer<T, S> 
+impl<T, const S: usize> Deref for ArrayBuffer<T, S>
 where
-    T: Clone + Copy + Default 
+    T: Clone + Copy + Default,
 {
-    type Target = [T;S];
+    type Target = [T; S];
     fn deref(&self) -> &Self::Target {
         &self.buf
     }
 }
 
-impl<T, const S: usize> DerefMut for ArrayBuffer<T, S> 
+impl<T, const S: usize> DerefMut for ArrayBuffer<T, S>
 where
-    T: Clone + Copy + Default 
+    T: Clone + Copy + Default,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.buf

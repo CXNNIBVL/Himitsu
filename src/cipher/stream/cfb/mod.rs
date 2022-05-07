@@ -1,8 +1,8 @@
 pub mod syncronous;
 pub mod threaded;
+use crate::traits::cipher::primitive::BlockCipherPrimitiveEncryption as PrimitiveEncryption;
 use syncronous::*;
 use threaded::*;
-use crate::traits::cipher::primitive::BlockCipherPrimitiveEncryption as PrimitiveEncryption;
 
 pub trait CfbEncryptionProvider<const BLOCKSIZE: usize> {
     type Cipher: PrimitiveEncryption<BLOCKSIZE>;

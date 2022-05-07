@@ -1,6 +1,6 @@
 use crate::traits::cipher::block::{BlockCipherDecryption, BlockCipherEncryption};
-use crate::util::secure::{ArrayBuffer, Vector};
 use crate::traits::util::buffer::Buffer;
+use crate::util::secure::{ArrayBuffer, Vector};
 use std::io;
 use std::iter::FromIterator;
 
@@ -27,7 +27,6 @@ impl<T: BlockCipherDecryption<B>, const B: usize> BufferedCipherDecryptionProvid
         BufferedCipherDecryption::new(self)
     }
 }
-
 
 pub struct BufferedCipherEncryption<T: BlockCipherEncryption<BLOCKSIZE>, const BLOCKSIZE: usize> {
     cipher: T,
