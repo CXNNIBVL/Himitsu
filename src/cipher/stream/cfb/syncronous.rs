@@ -14,7 +14,7 @@ pub struct CfbEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usi
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> CfbEncryption<T, B> {
-    pub fn new(primitive: T, iv: [u8; B]) -> Self {
+    pub(super) fn new(primitive: T, iv: [u8; B]) -> Self {
         Self {
             primitive,
             iv: Array::from(iv),
@@ -50,7 +50,7 @@ pub struct CfbDecryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usi
 }
 
 impl<T: PrimitiveEncryption<B>, const B: usize> CfbDecryption<T, B> {
-    pub fn new(primitive: T, iv: [u8; B]) -> Self {
+    pub(super) fn new(primitive: T, iv: [u8; B]) -> Self {
         Self {
             primitive,
             iv: Array::from(iv),

@@ -15,7 +15,7 @@ pub struct ThreadedEcb<const BLOCKSIZE: usize> {
 }
 
 impl<const B: usize> ThreadedEcb<B> {
-    pub fn encryption<T>(primitive: T, threads: usize) -> Self
+    pub(super) fn encryption<T>(primitive: T, threads: usize) -> Self
     where
         T: PrimitiveEncryption<B> + Send + Sync + 'static,
     {
@@ -27,7 +27,7 @@ impl<const B: usize> ThreadedEcb<B> {
         }
     }
 
-    pub fn decryption<T>(primitive: T, threads: usize) -> Self
+    pub(super) fn decryption<T>(primitive: T, threads: usize) -> Self
     where
         T: PrimitiveDecryption<B> + Send + Sync + 'static,
     {

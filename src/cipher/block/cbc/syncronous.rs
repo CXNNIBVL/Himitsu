@@ -17,7 +17,7 @@ pub struct CbcEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usi
 impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryption<T, B> {
     /// Create a new CBC Encryption instance from a primitive and an IV.
     /// Up to the primitives blocksize of IV contents will be used.
-    pub fn new(primitive: T, iv: [u8; B]) -> Self {
+    pub(super) fn new(primitive: T, iv: [u8; B]) -> Self {
         Self {
             primitive,
             iv: Array::from(iv),
@@ -39,7 +39,7 @@ pub struct CbcDecryption<T: PrimitiveDecryption<BLOCKSIZE>, const BLOCKSIZE: usi
 }
 
 impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryption<T, B> {
-    pub fn new(primitive: T, iv: [u8; B]) -> Self {
+    pub(super) fn new(primitive: T, iv: [u8; B]) -> Self {
         Self {
             primitive,
             iv: Array::from(iv),

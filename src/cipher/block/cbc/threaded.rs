@@ -22,7 +22,7 @@ pub struct ThreadedCbcDecryption<const BLOCKSIZE: usize> {
 }
 
 impl<const B: usize> ThreadedCbcDecryption<B> {
-    pub fn new<T>(primitive: T, iv: [u8; B], threads: usize) -> Self
+    pub(super) fn new<T>(primitive: T, iv: [u8; B], threads: usize) -> Self
     where
         T: PrimitiveDecryption<B> + Send + Sync + 'static,
     {

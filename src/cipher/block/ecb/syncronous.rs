@@ -15,7 +15,7 @@ pub struct EcbEncryption<T: PrimitiveEncryption<BLOCKSIZE>, const BLOCKSIZE: usi
 
 impl<T: PrimitiveEncryption<B>, const B: usize> EcbEncryption<T, B> {
     /// Create a new instance from a Cipher primitive
-    pub fn new(primitive: T) -> Self {
+    pub(super) fn new(primitive: T) -> Self {
         Self { primitive }
     }
 }
@@ -35,7 +35,7 @@ pub struct EcbDecryption<T: PrimitiveDecryption<BLOCKSIZE>, const BLOCKSIZE: usi
 
 impl<T: PrimitiveDecryption<B>, const B: usize> EcbDecryption<T, B> {
     /// Create a new instance from a Cipher primitive
-    pub fn new(primitive: T) -> Self {
+    pub(super) fn new(primitive: T) -> Self {
         Self { primitive }
     }
 }

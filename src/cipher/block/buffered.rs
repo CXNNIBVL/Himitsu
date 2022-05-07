@@ -35,7 +35,7 @@ pub struct BufferedCipherEncryption<T: BlockCipherEncryption<BLOCKSIZE>, const B
 }
 
 impl<T: BlockCipherEncryption<B>, const B: usize> BufferedCipherEncryption<T, B> {
-    pub fn new(cipher: T) -> Self {
+    fn new(cipher: T) -> Self {
         Self {
             cipher,
             buffer: ArrayBuffer::new(),
@@ -92,7 +92,7 @@ pub struct BufferedCipherDecryption<T: BlockCipherDecryption<BLOCKSIZE>, const B
 }
 
 impl<T: BlockCipherDecryption<B>, const B: usize> BufferedCipherDecryption<T, B> {
-    pub fn new(cipher: T) -> Self {
+    fn new(cipher: T) -> Self {
         Self {
             cipher,
             buffer: ArrayBuffer::new(),
