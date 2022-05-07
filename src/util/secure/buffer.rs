@@ -47,7 +47,7 @@ impl<T: Default + Copy, const S: usize> ArrayBuffer<T, S> {
     /// Extract the buffers contents and resets the buffer
     pub fn extract(&mut self) -> Array<T, S> {
         self.capacity = S;
-        mem::replace(&mut self.buf, Array::default())
+        mem::take(&mut self.buf)
     }
 
     /// Extract the buffers contents and resets the buffer in place, not resetting the capacity

@@ -100,7 +100,7 @@ impl HexEncoder {
         };
 
         // filter out any non-hex chars
-        let mut filtered = stripped.chars().filter_map(|c| is_hex(c));
+        let mut filtered = stripped.chars().filter_map(is_hex);
 
         while let Some(v1) = filtered.next() {
             match filtered.next() {

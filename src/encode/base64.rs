@@ -46,12 +46,12 @@ impl Base64Encoder {
         // Bytes are split into chunks of 6 bit each -> Must add up to multiple of 24 bit
         let mut chunks = bytes.chunks_exact(3);
 
-        while let Some(ch) = chunks.next() {
+        for chunk in chunks.by_ref() {
             // Main encoding step
-            let ia = ch[0] >> 2;
-            let ib = ((ch[0] & 0b11) << 4) | ((ch[1] & 0b11110000) >> 4);
-            let ic = ((ch[1] & 0b1111) << 2) | ((ch[2] & 0b11000000) >> 6);
-            let id = ch[2] & 0b111111;
+            let ia = chunk[0] >> 2;
+            let ib = ((chunk[0] & 0b11) << 4) | ((chunk[1] & 0b11110000) >> 4);
+            let ic = ((chunk[1] & 0b1111) << 2) | ((chunk[2] & 0b11000000) >> 6);
+            let id = chunk[2] & 0b111111;
 
             encoded.extend([
                 self.kind.value_at(ia as usize),
@@ -157,10 +157,10 @@ fn decode_core(filtered: Vec<u8>) -> Result<Vec<u8>, Base64Error> {
 
     let mut chunks = filtered.chunks_exact(4);
 
-    while let Some(ch) = chunks.next() {
-        decoded.push((ch[0] << 2) | (ch[1] >> 4));
-        decoded.push((ch[1] << 4) | (ch[2] >> 2));
-        decoded.push((ch[2] << 6) | ch[3]);
+    for chunk in chunks.by_ref() {
+        decoded.push((chunk[0] << 2) | (chunk[1] >> 4));
+        decoded.push((chunk[1] << 4) | (chunk[2] >> 2));
+        decoded.push((chunk[2] << 6) | chunk[3]);
     }
 
     match chunks.remainder().len() {

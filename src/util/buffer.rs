@@ -106,7 +106,7 @@ mod conversion {
     impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a [T; B]> for ArrayBuffer<T, B> {
         fn from(buf: &'a [T; B]) -> Self {
             Self {
-                buf: buf.clone(),
+                buf: *buf,
                 capacity: 0,
             }
         }
@@ -115,7 +115,7 @@ mod conversion {
     impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a mut [T; B]> for ArrayBuffer<T, B> {
         fn from(buf: &'a mut [T; B]) -> Self {
             Self {
-                buf: buf.clone(),
+                buf: *buf,
                 capacity: 0,
             }
         }

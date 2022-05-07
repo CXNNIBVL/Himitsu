@@ -16,10 +16,6 @@ impl<T: Send> PartialEq for Transmission<T> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
-
-    fn ne(&self, other: &Self) -> bool {
-        self.id != other.id
-    }
 }
 
 impl<T: Send> Eq for Transmission<T> {}
