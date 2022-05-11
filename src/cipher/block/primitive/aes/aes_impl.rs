@@ -155,8 +155,8 @@ fn add_roundkey(state: &mut [u8], key: &[u8]) {
 
 /// Substitute with SBOX
 fn sub_bytes_enc(state: &mut [u8]) {
-    for i in 0..16 {
-        state[i] = sbox(state[i] as usize);
+    for by in state {
+        *by = sbox(*by as usize);
     }
 }
 
@@ -177,34 +177,26 @@ fn shift_rows_enc(state: &mut [u8]) {
 }
 
 fn mix_columns_enc(state: &mut [u8]) {
-    let mut tmp: Array<u8, AES_BLOCKSIZE> = Array::default();
+    let mut tmp: Array<u8, 4> = Array::default();
 
-    tmp[0] = mul2(state[0] as usize) ^ mul3(state[1] as usize) ^ state[2] ^ state[3];
-    tmp[1] = state[0] ^ mul2(state[1] as usize) ^ mul3(state[2] as usize) ^ state[3];
-    tmp[2] = state[0] ^ state[1] ^ mul2(state[2] as usize) ^ mul3(state[3] as usize);
-    tmp[3] = mul3(state[0] as usize) ^ state[1] ^ state[2] ^ mul2(state[3] as usize);
+    for i in 0..4 {
+        let ix = i * 4;
 
-    tmp[4] = mul2(state[4] as usize) ^ mul3(state[5] as usize) ^ state[6] ^ state[7];
-    tmp[5] = state[4] ^ mul2(state[5] as usize) ^ mul3(state[6] as usize) ^ state[7];
-    tmp[6] = state[4] ^ state[5] ^ mul2(state[6] as usize) ^ mul3(state[7] as usize);
-    tmp[7] = mul3(state[4] as usize) ^ state[5] ^ state[6] ^ mul2(state[7] as usize);
+        tmp[0] = mul2(state[ix] as usize) ^ mul3(state[ix + 1] as usize) ^ state[ix + 2] ^ state[ix + 3];
+        tmp[1] = state[ix] ^ mul2(state[ix + 1] as usize) ^ mul3(state[ix + 2] as usize) ^ state[ix + 3];
+        tmp[2] = state[ix] ^ state[ix + 1] ^ mul2(state[ix + 2] as usize) ^ mul3(state[ix + 3] as usize);
+        tmp[3] = mul3(state[ix] as usize) ^ state[ix + 1] ^ state[ix + 2] ^ mul2(state[ix + 3] as usize);
 
-    tmp[8] = mul2(state[8] as usize) ^ mul3(state[9] as usize) ^ state[10] ^ state[11];
-    tmp[9] = state[8] ^ mul2(state[9] as usize) ^ mul3(state[10] as usize) ^ state[11];
-    tmp[10] = state[8] ^ state[9] ^ mul2(state[10] as usize) ^ mul3(state[11] as usize);
-    tmp[11] = mul3(state[8] as usize) ^ state[9] ^ state[10] ^ mul2(state[11] as usize);
-
-    tmp[12] = mul2(state[12] as usize) ^ mul3(state[13] as usize) ^ state[14] ^ state[15];
-    tmp[13] = state[12] ^ mul2(state[13] as usize) ^ mul3(state[14] as usize) ^ state[15];
-    tmp[14] = state[12] ^ state[13] ^ mul2(state[14] as usize) ^ mul3(state[15] as usize);
-    tmp[15] = mul3(state[12] as usize) ^ state[13] ^ state[14] ^ mul2(state[15] as usize);
-
-    state.copy_from_slice(tmp.as_ref());
+        state[ix] = tmp[0];
+        state[ix + 1] = tmp[1];
+        state[ix + 2] = tmp[2];
+        state[ix + 3] = tmp[3];
+    }
 }
 
 fn sub_bytes_dec(state: &mut [u8]) {
-    for i in 0..16 {
-        state[i] = inv_sbox(state[i] as usize);
+    for by in state {
+        *by = inv_sbox(*by as usize);
     }
 }
 
@@ -225,77 +217,21 @@ fn shift_rows_dec(state: &mut [u8]) {
 }
 
 fn mix_columns_dec(state: &mut [u8]) {
-    let mut tmp: Array<u8, AES_BLOCKSIZE> = Array::default();
+    let mut tmp: Array<u8, 4> = Array::default();
 
-    tmp[0] = mul14(state[0] as usize)
-        ^ mul11(state[1] as usize)
-        ^ mul13(state[2] as usize)
-        ^ mul9(state[3] as usize);
-    tmp[1] = mul9(state[0] as usize)
-        ^ mul14(state[1] as usize)
-        ^ mul11(state[2] as usize)
-        ^ mul13(state[3] as usize);
-    tmp[2] = mul13(state[0] as usize)
-        ^ mul9(state[1] as usize)
-        ^ mul14(state[2] as usize)
-        ^ mul11(state[3] as usize);
-    tmp[3] = mul11(state[0] as usize)
-        ^ mul13(state[1] as usize)
-        ^ mul9(state[2] as usize)
-        ^ mul14(state[3] as usize);
+    for i in 0..4 {
+        let ix = i * 4;
 
-    tmp[4] = mul14(state[4] as usize)
-        ^ mul11(state[5] as usize)
-        ^ mul13(state[6] as usize)
-        ^ mul9(state[7] as usize);
-    tmp[5] = mul9(state[4] as usize)
-        ^ mul14(state[5] as usize)
-        ^ mul11(state[6] as usize)
-        ^ mul13(state[7] as usize);
-    tmp[6] = mul13(state[4] as usize)
-        ^ mul9(state[5] as usize)
-        ^ mul14(state[6] as usize)
-        ^ mul11(state[7] as usize);
-    tmp[7] = mul11(state[4] as usize)
-        ^ mul13(state[5] as usize)
-        ^ mul9(state[6] as usize)
-        ^ mul14(state[7] as usize);
-
-    tmp[8] = mul14(state[8] as usize)
-        ^ mul11(state[9] as usize)
-        ^ mul13(state[10] as usize)
-        ^ mul9(state[11] as usize);
-    tmp[9] = mul9(state[8] as usize)
-        ^ mul14(state[9] as usize)
-        ^ mul11(state[10] as usize)
-        ^ mul13(state[11] as usize);
-    tmp[10] = mul13(state[8] as usize)
-        ^ mul9(state[9] as usize)
-        ^ mul14(state[10] as usize)
-        ^ mul11(state[11] as usize);
-    tmp[11] = mul11(state[8] as usize)
-        ^ mul13(state[9] as usize)
-        ^ mul9(state[10] as usize)
-        ^ mul14(state[11] as usize);
-
-    tmp[12] = mul14(state[12] as usize)
-        ^ mul11(state[13] as usize)
-        ^ mul13(state[14] as usize)
-        ^ mul9(state[15] as usize);
-    tmp[13] = mul9(state[12] as usize)
-        ^ mul14(state[13] as usize)
-        ^ mul11(state[14] as usize)
-        ^ mul13(state[15] as usize);
-    tmp[14] = mul13(state[12] as usize)
-        ^ mul9(state[13] as usize)
-        ^ mul14(state[14] as usize)
-        ^ mul11(state[15] as usize);
-    tmp[15] = mul11(state[12] as usize)
-        ^ mul13(state[13] as usize)
-        ^ mul9(state[14] as usize)
-        ^ mul14(state[15] as usize);
-
-    state.copy_from_slice(tmp.as_ref());
+        tmp[0] = mul14(state[ix] as usize) ^ mul11(state[ix + 1] as usize) ^ mul13(state[ix + 2] as usize) ^ mul9(state[ix + 3] as usize);
+        tmp[1] = mul9(state[ix] as usize) ^ mul14(state[ix + 1] as usize) ^ mul11(state[ix + 2] as usize) ^ mul13(state[ix + 3] as usize);
+        tmp[2] = mul13(state[ix] as usize) ^ mul9(state[ix + 1] as usize) ^ mul14(state[ix + 2] as usize) ^ mul11(state[ix + 3] as usize);
+        tmp[3] = mul11(state[ix] as usize) ^ mul13(state[ix + 1] as usize) ^ mul9(state[ix + 2] as usize) ^ mul14(state[ix + 3] as usize);
+    
+        state[ix] = tmp[0];
+        state[ix + 1] = tmp[1];
+        state[ix + 2] = tmp[2];
+        state[ix + 3] = tmp[3];
+    }
 }
 
 #[cfg(test)]
