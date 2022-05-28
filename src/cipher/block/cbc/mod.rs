@@ -1,38 +1,38 @@
-pub mod syncronous;
-pub mod threaded;
+mod syncronous;
+mod threaded;
 
 use crate::traits::cipher::primitive::{
     BlockCipherPrimitiveDecryption as PrimitiveDecryption,
     BlockCipherPrimitiveEncryption as PrimitiveEncryption,
 };
-use syncronous::*;
-use threaded::*;
+pub use syncronous::{CbcEncryption, CbcDecryption};
+pub use threaded::ThreadedCbcDecryption;
 
-pub trait CbcEncryptionProvider<const BLOCKSIZE: usize> {
+pub trait CbcEncryptionInjector<const BLOCKSIZE: usize> {
     type Primitive: PrimitiveEncryption<BLOCKSIZE>;
     fn with_cbc_encryption(self, iv: [u8; BLOCKSIZE]) -> CbcEncryption<Self::Primitive, BLOCKSIZE>;
 }
 
-impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryptionProvider<B> for T {
+impl<T: PrimitiveEncryption<B>, const B: usize> CbcEncryptionInjector<B> for T {
     type Primitive = Self;
     fn with_cbc_encryption(self, iv: [u8; B]) -> CbcEncryption<Self::Primitive, B> {
         CbcEncryption::new(self, iv)
     }
 }
 
-pub trait CbcDecryptionProvider<const BLOCKSIZE: usize> {
+pub trait CbcDecryptionInjector<const BLOCKSIZE: usize> {
     type Primitive: PrimitiveDecryption<BLOCKSIZE>;
     fn with_cbc_decryption(self, iv: [u8; BLOCKSIZE]) -> CbcDecryption<Self::Primitive, BLOCKSIZE>;
 }
 
-impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryptionProvider<B> for T {
+impl<T: PrimitiveDecryption<B>, const B: usize> CbcDecryptionInjector<B> for T {
     type Primitive = Self;
     fn with_cbc_decryption(self, iv: [u8; B]) -> CbcDecryption<Self::Primitive, B> {
         CbcDecryption::new(self, iv)
     }
 }
 
-pub trait ThreadedCbcDecryptionProvider<const BLOCKSIZE: usize> {
+pub trait ThreadedCbcDecryptionInjector<const BLOCKSIZE: usize> {
     fn with_threaded_cbc_decryption(
         self,
         iv: [u8; BLOCKSIZE],
@@ -40,7 +40,7 @@ pub trait ThreadedCbcDecryptionProvider<const BLOCKSIZE: usize> {
     ) -> ThreadedCbcDecryption<BLOCKSIZE>;
 }
 
-impl<T, const B: usize> ThreadedCbcDecryptionProvider<B> for T
+impl<T, const B: usize> ThreadedCbcDecryptionInjector<B> for T
 where
     T: PrimitiveDecryption<B> + Send + Sync + 'static,
 {

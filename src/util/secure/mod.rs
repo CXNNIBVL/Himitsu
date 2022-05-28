@@ -1,7 +1,7 @@
-pub mod array;
-pub mod buffer;
-pub mod vec;
+mod array;
+mod buffer;
+mod vec;
 
-pub use array::*;
-pub use buffer::*;
-pub use vec::*;
+pub use array::Array;
+pub use buffer::ArrayBuffer;
+pub use vec::Vector;

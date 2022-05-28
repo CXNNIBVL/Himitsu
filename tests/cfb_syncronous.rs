@@ -6,7 +6,7 @@ mod tests {
     use super::common::{decode, decode_into_array};
     use himitsu::cipher::{
         block::primitive::aes,
-        stream::cfb::{CfbDecryptionProvider, CfbEncryptionProvider},
+        stream::cfb::{CfbDecryptionInjector, CfbEncryptionInjector},
     };
     use himitsu::prelude::*;
 

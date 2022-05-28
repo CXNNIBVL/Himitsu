@@ -2,24 +2,32 @@ use std::ops::BitXorAssign;
 
 /// XORs src elements into dst and returns the number of xored elements
 ///
-/// src and dst must be the same length, otherwise the function will panic
-pub fn xor_buffers_unchecked<T: BitXorAssign + Clone>(dst: &mut [T], src: &[T]) -> usize {
-    for i in 0..dst.len() {
-        dst[i] ^= src[i].clone();
-    }
-
-    dst.len()
-}
-
-/// XORs src elements into dst and returns the number of xored elements
-///
 /// XORs at least `min(src, dst)` elements
 pub fn xor_buffers<T: BitXorAssign + Clone>(dst: &mut [T], src: &[T]) -> usize {
-    use std::cmp::min;
-    let s = min(src.len(), dst.len());
-    for i in 0..s {
-        dst[i] ^= src[i].clone();
-    }
 
-    s
+    let mut count = 0;
+    dst.iter_mut().zip(src).for_each(|(d, s)| {
+        *d ^= s.clone();
+        count += 1;
+    });
+
+    count
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_xor_buffers() {
+
+        let mut a = [0, 1, 0, 1];
+        let b = [0, 0, 1, 1];
+        let eq = [0, 1, 1, 0];
+
+        let count = xor_buffers(&mut a, &b);
+        assert_eq!(count, 4);
+        assert_eq!(a, eq);
+
+    }
 }

@@ -4,7 +4,7 @@ mod common;
 mod tests {
 
     use super::common::{decode, decode_into_array};
-    use himitsu::cipher::block::{cbc::ThreadedCbcDecryptionProvider, primitive::aes};
+    use himitsu::cipher::block::{cbc::ThreadedCbcDecryptionInjector, primitive::aes};
     use std::io::Write;
 
     macro_rules! cbc_test_dec {

@@ -4,24 +4,24 @@ use crate::util::secure::{ArrayBuffer, Vector};
 use std::io;
 use std::iter::FromIterator;
 
-pub trait BufferedCipherEncryptionProvider<const BLOCKSIZE: usize> {
+pub trait BufferedCipherEncryptionInjector<const BLOCKSIZE: usize> {
     type Cipher: BlockCipherEncryption<BLOCKSIZE>;
     fn buffered(self) -> BufferedCipherEncryption<Self::Cipher, BLOCKSIZE>;
 }
 
-impl<T: BlockCipherEncryption<B>, const B: usize> BufferedCipherEncryptionProvider<B> for T {
+impl<T: BlockCipherEncryption<B>, const B: usize> BufferedCipherEncryptionInjector<B> for T {
     type Cipher = Self;
     fn buffered(self) -> BufferedCipherEncryption<Self::Cipher, B> {
         BufferedCipherEncryption::new(self)
     }
 }
 
-pub trait BufferedCipherDecryptionProvider<const BLOCKSIZE: usize> {
+pub trait BufferedCipherDecryptionInjector<const BLOCKSIZE: usize> {
     type Cipher: BlockCipherDecryption<BLOCKSIZE>;
     fn buffered(self) -> BufferedCipherDecryption<Self::Cipher, BLOCKSIZE>;
 }
 
-impl<T: BlockCipherDecryption<B>, const B: usize> BufferedCipherDecryptionProvider<B> for T {
+impl<T: BlockCipherDecryption<B>, const B: usize> BufferedCipherDecryptionInjector<B> for T {
     type Cipher = Self;
     fn buffered(self) -> BufferedCipherDecryption<Self::Cipher, B> {
         BufferedCipherDecryption::new(self)

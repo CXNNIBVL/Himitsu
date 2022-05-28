@@ -1,99 +1,176 @@
-use super::{
-    standard::AlgorithmStandard,
-    bitsliced::AlgorithmBitsliced
-};
-use crate::util::secure::Array;
+use super::constants::*;
+use crate::{util::secure::Array, array, mem};
 
-pub type Serpent = SerpentImpl<AlgorithmStandard>;
-pub type SerpentBitsliced = SerpentImpl<AlgorithmBitsliced>;
+pub type Serpent128 = Serpent<SERPENT_128_KEYLEN>;
+pub type Serpent192 = Serpent<SERPENT_192_KEYLEN>;
+pub type Serpent256 = Serpent<SERPENT_256_KEYLEN>;
 
-pub trait AlgorithmProvider {
-    fn new() -> Self;
+pub struct Serpent<const INPUT_KEY_LEN: usize> {
+    key: Array<u8, SERPENT_EXPANDED_KEYLEN>
 }
 
-pub struct SerpentImpl<A: AlgorithmProvider> {
-    algorithm: A,
-    key: Array<u32, 132>
-}
-
-impl<A: AlgorithmProvider> SerpentImpl<A> {
-
-    pub fn new(key: [u8; 32]) -> Self {
-        let expanded_key = key_schedule(key);
+impl<const IK: usize> Serpent<IK> {
+    pub fn new(key: [u8; IK]) -> Self {
+        let expanded_key = key_schedule( padding( array!(key) ) );
         
         Self {
-            algorithm: A::new(),
             key: Array::from(expanded_key)
         }
     }
+
+
 }
 
-fn key_schedule(key: [u8; 32]) -> [u32; 132] {
+/// Applies the Serpent padding scheme to shorter keys
+fn padding<const IK: usize>(key: Array<u8, IK>) -> Array<u8, SERPENT_PADDED_KEYLEN> {
 
-    // let user_key = transmute_key(key);
-    [0;132]
-}
+    let mut padded = array![0; SERPENT_PADDED_KEYLEN];
 
-fn transmute_key(key: [u8; 32]) -> [u32; 8] {
-
-    let mut transmuted = [0; 8];
-
-    for i in 0..8 {
-        let start = i * 4;
-        let end = start + 4;
-
-        for ix in start..end {
-            transmuted[i] <<= 8;
-            transmuted[i] |= key[ix] as u32;
-        }
+    for i in 0..key.len() {
+        padded[i] = key[i]
     }
 
-    transmuted
+    // Check for short key
+    if key.len() < SERPENT_PADDED_KEYLEN {
+        // Add single '1' bit
+        padded[key.len()] = 0b10000000;
+    }
+
+    padded
 }
 
-/*
-    void w(uint32_t *w) {
-        for (short i = 8; i < 140; i++) {
-            w[i] = ROTL((w[i - 8] ^ w[i - 5] ^ w[i - 3] ^ w[i - 1] ^ FRAC ^ (i - 8)), 11);
-        }
+fn key_schedule(key: Array<u8, SERPENT_PADDED_KEYLEN>) -> Array<u8, SERPENT_EXPANDED_KEYLEN> {
+
+    let mut keys = array![0; SERPENT_EXPANDED_KEYLEN];
+    
+    for i in 0..key.len() {
+        keys[i] = key[i];
     }
-*/
+
+    let sections = [8,5,3,1];
+    for i in 8..140 {
+
+        let into_section_start = i * 4;
+        let into_section_end = into_section_start + 4;
+
+        // Assign Frac
+        {
+            let into = &mut keys[into_section_start..into_section_end];
+            into.copy_from_slice(&FRAC);
+        }
+
+        // Xor Key sections into the new key section
+        for s in sections.iter() {
+            
+            let (start, end) = ( (i - s) * 4, into_section_end);
+            let section = &mut keys[start..end];
+
+            keyschedule_xor_section(section); 
+        }
+
+        // Xor i into the key section
+        let bytes = u32_as_le_bytes( (i - 8) as u32);
+        keys[into_section_start] ^= bytes.0;
+        keys[into_section_start + 1] ^= bytes.1;
+        keys[into_section_start + 2] ^= bytes.2;
+        keys[into_section_start + 3] ^= bytes.3;
+
+        rotate_u32_from_raw_bytes(&mut keys[into_section_start..into_section_end], 11);
+        
+        // let tmp = prekeys[i - 8] ^ prekeys[i - 5] ^ prekeys[i - 3] ^ prekeys[i - 1] ^ FRAC ^ (i as u32 - 8);
+        // prekeys[i] = tmp.rotate_left(11);
+    }
+
+    keys
+}
+
+fn rotate_u32_from_raw_bytes(bytes: &mut [u8], count: usize) {
+
+}
+
+fn u32_as_le_bytes(x: u32) -> (u8, u8, u8, u8) {
+    let b1 = ( (x & 0xFF000000) >> 24) as u8;
+    let b2 = ( (x & 0x00FF0000) >> 16) as u8;
+    let b3 = ( (x & 0x0000FF00) >> 8) as u8;
+    let b4 = (x & 0x000000FF) as u8;
+
+    (b1, b2, b3, b4)
+}
+
+fn keyschedule_xor_section(section: &mut [u8]) {
+
+    let (xor_section, rem) = section.split_at_mut(4);
+    let into_ix = rem.len() - 4;
+
+    mem::xor_buffers(&mut rem[into_ix..into_ix + 4], xor_section);
+}
+
+// fn key_schedule(key: Array<u8, SERPENT_PADDED_KEYLEN>) -> Array<u8, SERPENT_EXPANDED_KEYLEN> {
+
+//     let mut keys = array![0; SERPENT_EXPANDED_KEYLEN];
+    
+//     for i in 0..key.len() {
+//         keys[i] = key[i];
+//     }
+
+//     for i in 8..140 {
+
+//         let into_ix = i * 4;
+
+//         // Assign Frac
+//         {
+//             let into = &mut keys[into_ix..into_ix + 4];
+
+//             into.copy_from_slice(&FRAC);
+//         }
+
+//         // Xor u32 key sections into the specific u32 into section
+//         keyschedule_xor_sections(keys.as_mut(), i, 8);
+//         keyschedule_xor_sections(keys.as_mut(), i, 5);
+//         keyschedule_xor_sections(keys.as_mut(), i, 3);
+//         keyschedule_xor_sections(keys.as_mut(), i, 1);
+
+//         // Xor i into the key section
+//         mem::xor_buffers(
+//             &mut keys[into_ix..into_ix + 4], 
+//             u32_as_array_u8( (i - 8) as u32).as_ref()
+//         );
+        
+//         // let tmp = prekeys[i - 8] ^ prekeys[i - 5] ^ prekeys[i - 3] ^ prekeys[i - 1] ^ FRAC ^ (i as u32 - 8);
+//         // prekeys[i] = tmp.rotate_left(11);
+//     }
+
+//     keys
+// }
+
+// fn u32_as_array_u8(x: u32) -> Array<u8, 4> {
+//     let b1 = ( (x & 0xFF000000) >> 24) as u8;
+//     let b2 = ( (x & 0x00FF0000) >> 16) as u8;
+//     let b3 = ( (x & 0x0000FF00) >> 8) as u8;
+//     let b4 = (x & 0x000000FF) as u8;
+
+//     array![b1, b2, b3, b4]
+// }
+
+// fn keyschedule_xor_sections(keys: &mut [u8], i: usize, ix: usize) {
+    
+//     // Get section that starts at the position we want to xor
+//     let split_ix = (i - ix) * 4;
+//     let (_, section) = keys.split_at_mut(split_ix);
+
+//     // Split off the first 4 bytes
+//     let (xor_section, rem) = section.split_at_mut(4);
+
+//     // Get the into section
+//     let into_ix = ix * 4;
+//     let into = &mut rem[into_ix..into_ix + 4];
+
+//     mem::xor_buffers(into, xor_section);
+// } 
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn tst() {
-        let mut key = [0;32];
-        for i in 0..32 {
-            key[i] = i as u8;
-        }
-
-        let res = transmute_key(key);
-        
-        for word in res {
-            for i in 0..4 {
-                let sh = word >> i * 8;
-                let byte = (sh & 0xFF) as u8;
-                println!("{}", byte);
-            }
-        }
-    }
-
-    #[test]
-    fn test_transmute_key() {
-        
-        let mut key = [0;32];
-        for i in 0..32 {
-            key[i] = i as u8;
-        }
-
-        let expected = [0; 8];
-        
-
-        let res = transmute_key(key);
-        
-        assert_eq!(res, expected);
-    }
+    
 }

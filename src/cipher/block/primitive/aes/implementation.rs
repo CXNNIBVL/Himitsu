@@ -4,29 +4,12 @@ use crate::traits::cipher::primitive::{
 };
 
 use super::constants::*;
-use crate::mem;
+use crate::{mem, array};
 use crate::util::secure::Array;
 
-pub struct Aes128;
-impl Aes128 {
-    pub fn new(key: [u8; AES_128_KEYLEN]) -> Aes<AES_128_EXPANDED_KEYLEN> {
-        Aes::new(key_expansion(key))
-    }
-}
-
-pub struct Aes192;
-impl Aes192 {
-    pub fn new(key: [u8; AES_192_KEYLEN]) -> Aes<AES_192_EXPANDED_KEYLEN> {
-        Aes::new(key_expansion(key))
-    }
-}
-
-pub struct Aes256;
-impl Aes256 {
-    pub fn new(key: [u8; AES_256_KEYLEN]) -> Aes<AES_256_EXPANDED_KEYLEN> {
-        Aes::new(key_expansion(key))
-    }
-}
+pub type Aes128 = Aes<AES_128_KEYLEN, AES_128_EXPANDED_KEYLEN>;
+pub type Aes192 = Aes<AES_192_KEYLEN, AES_192_EXPANDED_KEYLEN>;
+pub type Aes256 = Aes<AES_256_KEYLEN, AES_256_EXPANDED_KEYLEN>;
 
 fn key_expansion_gcon(k: &mut [u8; 4]) {
     // Apply S_BOX
@@ -43,7 +26,7 @@ fn key_expansion_rcon(k: &mut [u8; 4], iteration: usize) {
 }
 
 fn key_expansion<const IN_LEN: usize, const OUT_LEN: usize>(
-    key: [u8; IN_LEN],
+    key: Array<u8, IN_LEN>,
 ) -> Array<u8, OUT_LEN> {
     let mut expanded_key: Array<u8, OUT_LEN> = Array::default();
     let mut bytes_generated = 0;
@@ -72,7 +55,7 @@ fn key_expansion<const IN_LEN: usize, const OUT_LEN: usize>(
         }
 
         let ix = bytes_generated - IN_LEN;
-        mem::xor_buffers_unchecked(tmp.as_mut(), &expanded_key[ix..ix + 4]);
+        mem::xor_buffers(tmp.as_mut(), &expanded_key[ix..ix + 4]);
 
         for i in 0..4 {
             expanded_key[bytes_generated] = tmp[i];
@@ -84,16 +67,19 @@ fn key_expansion<const IN_LEN: usize, const OUT_LEN: usize>(
 }
 
 /// Aes Encryption and Decryption provider
-pub struct Aes<const EXPANDED_LEN: usize> {
+pub struct Aes<const KEY_INPUT_LEN: usize, const KEY_EXPANDED_LEN: usize> {
     rounds: usize,
-    key: Array<u8, EXPANDED_LEN>,
+    key: Array<u8, KEY_EXPANDED_LEN>,
 }
 
-impl<const E: usize> Aes<E> {
-    fn new(key: Array<u8, E>) -> Self {
+impl<const KI: usize, const KE: usize> Aes<KI, KE> {
+    pub fn new(key: [u8; KI]) -> Self {
+
+        let expanded_key = key_expansion( array!(key) );
+
         Self {
-            rounds: (E / AES_BLOCKSIZE) - 1,
-            key,
+            rounds: (KE / AES_BLOCKSIZE) - 1,
+            key: expanded_key
         }
     }
 }
@@ -111,7 +97,7 @@ fn roundkey(expanded_key: &[u8], round: usize) -> &[u8] {
     &expanded_key[start..end]
 }
 
-impl<const E: usize> PrimitiveEncryption<AES_BLOCKSIZE> for Aes<E> {
+impl<const KI: usize, const KE: usize> PrimitiveEncryption<AES_BLOCKSIZE> for Aes<KI, KE> {
     fn encrypt(&self, state: &mut Block) {
         add_roundkey(state.as_mut(), roundkey(self.key.as_ref(), 0));
 
@@ -130,7 +116,7 @@ impl<const E: usize> PrimitiveEncryption<AES_BLOCKSIZE> for Aes<E> {
     }
 }
 
-impl<const E: usize> PrimitiveDecryption<AES_BLOCKSIZE> for Aes<E> {
+impl<const KI: usize, const KE: usize> PrimitiveDecryption<AES_BLOCKSIZE> for Aes<KI, KE> {
     fn decrypt(&self, state: &mut Block) {
         add_roundkey(state.as_mut(), roundkey(self.key.as_ref(), self.rounds));
         sub_bytes_dec(state.as_mut());
@@ -150,7 +136,7 @@ impl<const E: usize> PrimitiveDecryption<AES_BLOCKSIZE> for Aes<E> {
 
 /// Xor round key into state
 fn add_roundkey(state: &mut [u8], key: &[u8]) {
-    mem::xor_buffers_unchecked(state, key);
+    mem::xor_buffers(state, key);
 }
 
 /// Substitute with SBOX
@@ -270,7 +256,7 @@ mod tests {
             decode_into_array::<AES_128_KEYLEN>(key_str),
             decode(expected_str),
         );
-        let expanded: Array<u8, AES_128_EXPANDED_KEYLEN> = key_expansion(key);
+        let expanded: Array<u8, AES_128_EXPANDED_KEYLEN> = key_expansion( array!(key) );
 
         assert_eq!(expanded.as_slice(), expected.as_slice());
     }
@@ -296,7 +282,7 @@ mod tests {
             decode_into_array::<AES_192_KEYLEN>(key_str),
             decode(expected_str),
         );
-        let expanded: Array<u8, AES_192_EXPANDED_KEYLEN> = key_expansion(key);
+        let expanded: Array<u8, AES_192_EXPANDED_KEYLEN> = key_expansion(array!(key));
 
         assert_eq!(expanded.as_slice(), expected.as_slice());
     }
@@ -324,7 +310,7 @@ mod tests {
             decode_into_array::<AES_256_KEYLEN>(key_str),
             decode(expected_str),
         );
-        let expanded: Array<u8, AES_256_EXPANDED_KEYLEN> = key_expansion(key);
+        let expanded: Array<u8, AES_256_EXPANDED_KEYLEN> = key_expansion(array!(key));
 
         assert_eq!(expanded.as_slice(), expected.as_slice());
     }

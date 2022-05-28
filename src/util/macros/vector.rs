@@ -11,8 +11,19 @@ macro_rules! vector {
         }
     };
 
-    // From default value and length
+    // From default value and length as literal
     ($default_value: literal; $length: literal) => {
+
+        {
+            use crate::util::secure::Vector;
+            let v = vec![$default_value; $length];
+            
+            Vector::from(v)
+        }
+    };
+
+    // From default value and length as ident (e.g constant)
+    ($default_value: literal; $length: ident) => {
 
         {
             use crate::util::secure::Vector;

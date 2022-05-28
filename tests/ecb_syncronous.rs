@@ -5,8 +5,8 @@ mod tests {
 
     use super::common::{decode, decode_into_array};
     use himitsu::cipher::block::{
-        buffered::{BufferedCipherDecryptionProvider, BufferedCipherEncryptionProvider},
-        ecb::{EcbDecryptionProvider, EcbEncryptionProvider},
+        buffered::{BufferedCipherDecryptionInjector, BufferedCipherEncryptionInjector},
+        ecb::{EcbDecryptionInjector, EcbEncryptionInjector},
         primitive::aes,
     };
     use std::io::Write;
