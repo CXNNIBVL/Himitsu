@@ -1,6 +1,6 @@
 pub fn decode(s: &str) -> Vec<u8> {
-    use himitsu::encode::HexEncoder;
-    HexEncoder::builder().decode(s)
+    use himitsu::encode::hex::HexDecoder;
+    s.chars().decode_hex()
 }
 
 pub fn decode_into_array<const B: usize>(s: &str) -> [u8; B] {

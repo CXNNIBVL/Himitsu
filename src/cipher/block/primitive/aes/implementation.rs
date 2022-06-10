@@ -226,8 +226,8 @@ mod tests {
     use super::*;
 
     fn decode(s: &str) -> Vec<u8> {
-        use crate::encode::HexEncoder;
-        HexEncoder::builder().decode(s)
+        use crate::encode::hex::HexDecoder;
+        s.chars().decode_hex()
     }
 
     fn decode_into_array<const B: usize>(s: &str) -> [u8; B] {

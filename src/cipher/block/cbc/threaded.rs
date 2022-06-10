@@ -6,7 +6,6 @@ use crate::util::{
     secure::{Array, ArrayBuffer},
 };
 use std::io;
-use std::iter::FromIterator;
 
 struct Transmission<const S: usize> {
     block: Array<u8, S>,
@@ -60,11 +59,9 @@ impl<const B: usize> ThreadedCbcDecryption<B> {
         None
     }
 
-    pub fn finalize<I>(mut self) -> I
-    where
-        I: FromIterator<u8>,
+    pub fn finalize(mut self) -> impl Iterator<Item=u8>
     {
-        self.mutator.finalize().into_iter().flatten().collect()
+        self.mutator.finalize().into_iter().flatten()
     }
 }
 

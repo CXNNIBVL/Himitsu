@@ -5,7 +5,6 @@ use crate::traits::cipher::primitive::{
 use crate::traits::util::buffer::Buffer;
 use crate::util::{buffer::ArrayBuffer, iopool::IoPool};
 use std::io;
-use std::iter::FromIterator;
 
 type Mutator<const BLOCKSIZE: usize> = IoPool<[u8; BLOCKSIZE], [u8; BLOCKSIZE]>;
 
@@ -73,11 +72,9 @@ impl<const B: usize> ThreadedEcb<B> {
     }
 
     /// Consumes the cipher, ignoring any buffered bytes and returns a Readable with the processed contents
-    pub fn finalize<I>(mut self) -> I
-    where
-        I: FromIterator<u8>,
+    pub fn finalize(mut self) -> impl Iterator<Item=u8>
     {
-        self.mutator.finalize().into_iter().flatten().collect()
+        self.mutator.finalize().into_iter().flatten()
     }
 }
 

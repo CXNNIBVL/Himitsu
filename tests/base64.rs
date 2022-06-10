@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use himitsu::encode::Base64Encoder;
+    use himitsu::encode::base64::Base64Encoder;
     use himitsu::errors::base64::Base64Error;
 
     // Encode some data that results in a Base64 String with 0 padding characters

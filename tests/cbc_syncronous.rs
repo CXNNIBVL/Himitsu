@@ -31,7 +31,7 @@ mod tests {
                 let mut cipher = <$cipher>::new(key).with_cbc_encryption(iv).buffered();
                 cipher.write_all(&input).unwrap();
 
-                let output: Vec<u8> = cipher.finalize();
+                let output: Vec<u8> = cipher.finalize().collect();
 
                 assert_eq!(expected, output);
             }
@@ -58,7 +58,7 @@ mod tests {
                 let mut cipher = <$cipher>::new(key).with_cbc_decryption(iv).buffered();
                 cipher.write_all(&input).unwrap();
 
-                let output: Vec<u8> = cipher.finalize();
+                let output: Vec<u8> = cipher.finalize().collect();
 
                 assert_eq!(expected, output);
             }

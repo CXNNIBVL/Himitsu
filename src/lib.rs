@@ -6,3 +6,4 @@ pub mod mem;
 pub mod prelude;
 pub mod traits;
 pub mod util;
+pub mod macros;

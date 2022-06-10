@@ -2,7 +2,6 @@ use crate::traits::cipher::block::{BlockCipherDecryption, BlockCipherEncryption}
 use crate::traits::util::buffer::Buffer;
 use crate::util::secure::{ArrayBuffer, Vector};
 use std::io;
-use std::iter::FromIterator;
 
 pub trait BufferedCipherEncryptionInjector<const BLOCKSIZE: usize> {
     type Cipher: BlockCipherEncryption<BLOCKSIZE>;
@@ -57,11 +56,9 @@ impl<T: BlockCipherEncryption<B>, const B: usize> BufferedCipherEncryption<T, B>
         self.out.extend(buf.into_iter())
     }
 
-    pub fn finalize<I>(self) -> I
-    where
-        I: FromIterator<u8>,
+    pub fn finalize(self) -> impl Iterator<Item=u8>
     {
-        self.out.into_iter().collect()
+        self.out.into_iter()
     }
 }
 
@@ -114,11 +111,9 @@ impl<T: BlockCipherDecryption<B>, const B: usize> BufferedCipherDecryption<T, B>
         self.out.extend(buf.into_iter())
     }
 
-    pub fn finalize<I>(self) -> I
-    where
-        I: FromIterator<u8>,
+    pub fn finalize(self) -> impl Iterator<Item=u8>
     {
-        self.out.into_iter().collect()
+        self.out.into_iter()
     }
 }
 

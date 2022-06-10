@@ -20,6 +20,15 @@ macro_rules! array {
         }
     };
 
+    // Default Array of type and length as expr (e.g SIZE + 1)
+    ($type: ty, $length: expr) => {
+
+        { 
+            use crate::util::secure::Array;
+            Array::<$type, $length>::default() 
+        }
+    };
+
     // From default value and length as literal
     ($default_value: literal; $length: literal) => {
 
@@ -34,6 +43,19 @@ macro_rules! array {
 
     // From default value and length as ident (e.g constant)
     ($default_value: literal; $length: ident) => {
+
+        {
+            let arr = [$default_value; $length];
+            let sec = array!(arr);
+            
+            sec
+        }
+
+    };
+
+    
+    // From default value and length as expr (e.g SIZE + 1)
+    ($default_value: literal; $length: expr) => {
 
         {
             let arr = [$default_value; $length];
