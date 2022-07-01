@@ -1,12 +1,7 @@
 [package]
 name = "himitsu"
 version = "0.1.0"
-edition = "2018"
-
-[dev-dependencies]
-# For Tests
-# toml = "0.5.8"
-# serde = { version = "1.0.136", features = ["derive"] }
+edition = "2021"
 
 [dependencies]
 thiserror = "1.0.30"

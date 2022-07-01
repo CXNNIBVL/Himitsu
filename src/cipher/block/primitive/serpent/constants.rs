@@ -22,7 +22,7 @@ fn words_as_word_mut<'a>(words: &'a mut [u32]) -> WordsAsWord<'a> {
     (the optimized one, contained in `floppy2' of the AES Submission Package)
 */
 
-const S_BOXES: [fn(&mut [u32]) -> (); 8] = [
+pub const S_BOXES: [fn(&mut [u32]) -> (); 8] = [
     sbox_0,
     sbox_1,
     sbox_2,
@@ -33,7 +33,7 @@ const S_BOXES: [fn(&mut [u32]) -> (); 8] = [
     sbox_7
 ];
 
-const INV_S_BOXES: [fn(&mut [u32]) -> (); 8] = [
+pub const INV_S_BOXES: [fn(&mut [u32]) -> (); 8] = [
     inv_sbox_0,
     inv_sbox_1,
     inv_sbox_2,
@@ -43,15 +43,6 @@ const INV_S_BOXES: [fn(&mut [u32]) -> (); 8] = [
     inv_sbox_6,
     inv_sbox_7
 ];
-
-pub fn sbox(sbox_index: usize, words: &mut [u32]) {
-    S_BOXES[sbox_index](words);
-}
-
-pub fn inv_sbox(sbox_index: usize, words: &mut [u32]) {
-    INV_S_BOXES[sbox_index](words)
-}
-
 
 #[allow(non_snake_case, unused_assignments)]
 pub fn sbox_0(words: &mut [u32]) {

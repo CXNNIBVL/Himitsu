@@ -19,52 +19,54 @@ impl<const IK: usize> Serpent<IK> {
 
 }
 
-fn generate_start_prekey_from_input_key<const IK: usize>(key: Array<u8, IK>) -> Array<u32, SERPENT_EXPANDED_KEYLEN> {
+fn generate_start_key_from_input_key<const IK: usize>(input_key: Array<u8, IK>) -> Array<u32, SERPENT_EXPANDED_KEYLEN> {
 
-    let mut sub_key = array![0; SERPENT_EXPANDED_KEYLEN];
+    let mut start_key = array![0; SERPENT_EXPANDED_KEYLEN];
 
-    // Iterator over bytes, apply serpent padding (0x80) if necessary,
+    // Iterate over bytes, apply serpent padding (0x80) if necessary,
     // take only up to the padded length
-    let iter = key.iter()
-                                    .chain([0x80].iter())
+    let iter = input_key.into_iter()
+                                    .chain([0x80].into_iter())
                                     .take(SERPENT_PADDED_KEYLEN);
 
-    serialize_bytes_iter_into_u32_slice(sub_key.as_mut(), iter);
+    serialize_bytes_iter_into_u32_slice(start_key.as_mut(), iter);
 
-    sub_key
+    start_key
 }
 
 fn serialize_bytes_iter_into_u32_slice<'a, I>(into: &mut [u32], iter: I) 
-    where I: Iterator<Item = &'a u8>
+    where I: Iterator<Item = u8>
 {
     for (i, byte) in iter.enumerate() {
-        into[i / 4] |= (*byte as u32) << (24 - (i % 4) * 8 );
+        into[i / 4] |= (byte as u32) << (24 - (i % 4) * 8 );
     }
 }
+ 
+fn key_schedule<const IK: usize>(input_key: Array<u8, IK>) -> Array<u32, SERPENT_EXPANDED_KEYLEN> {
 
-fn key_schedule<const IK: usize>(key: Array<u8, IK>) -> Array<u32, SERPENT_EXPANDED_KEYLEN> {
+    let mut keys = generate_start_key_from_input_key(input_key);
 
-    let mut pre_keys = generate_start_prekey_from_input_key(key);
-
-    for i in 8..SERPENT_EXPANDED_KEYLEN {
-        let tmp = pre_keys[i - 8] ^ pre_keys[i - 5] ^ pre_keys[i - 3] ^ pre_keys[i - 1] ^ FRAC ^ (i as u32 - 8);
-        pre_keys[i] = tmp.rotate_left(11);
+    // Compute pre-keys
+    for ix in 8..SERPENT_EXPANDED_KEYLEN {
+        let word = keys[ix - 8] ^ keys[ix - 5] ^ keys[ix - 3] ^ keys[ix - 1] ^ FRAC ^ (ix as u32 - 8);
+        keys[ix] = word.rotate_left(11);
     }
 
-    // Iterator starting at 3, counting downwards continuously
-    let use_sbox_iter = (0..=7).rev().cycle().skip(4);
+    // Iterator starting at 3, counting downwards, cycling continuously.
+    // Get corresponding SBox
+    let sbox_iter = (0..=7).rev()
+    .cycle()
+    .skip(4)
+    .map(|sbox|{ S_BOXES[sbox] });
 
-    // Index points at the start of each 4 x u32 block
-    let slice_index_iter = (0..(SERPENT_EXPANDED_KEYLEN / 4)).map(|ix|{ix * 4});
+    let block_w_sbox = keys.chunks_mut(4).zip(sbox_iter);
 
-    for (index, use_sbox) in slice_index_iter.zip(use_sbox_iter) {
-
-        let slice = &mut pre_keys[index..];
-        let (words, _) = slice.split_at_mut(4);
-        sbox(use_sbox, words);
+    // Apply SBox
+    for (block, sbox) in block_w_sbox {
+        sbox(block);
     }
 
-    pre_keys
+    keys
 }
 
 #[cfg(test)]
@@ -96,14 +98,6 @@ mod tests {
     }
 
     #[test]
-    fn tst_cyc() {
-        let use_sbox_iter = (0..=7).rev().cycle().skip(4);
-        for (_, use_sbox) in (0..20).into_iter().zip(use_sbox_iter) {
-            println!("{}", use_sbox);
-        }
-    }
-
-    #[test]
     fn test_generate_start_subkey_input0() {
         use std::iter;
 
@@ -115,7 +109,7 @@ mod tests {
                                 .chain(iter::repeat(0))
                                 .take(SERPENT_PADDED_KEYLEN).collect();
 
-        let res_words = generate_start_prekey_from_input_key(input_key);
+        let res_words = generate_start_key_from_input_key(input_key);
         let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
 
         assert!(
@@ -140,7 +134,7 @@ mod tests {
                                         .collect();
                                         
 
-        let res_words = generate_start_prekey_from_input_key(input_key);
+        let res_words = generate_start_key_from_input_key(input_key);
         let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
 
         assert!(
@@ -155,15 +149,14 @@ mod tests {
 
         let input_key = array![0xAA; SERPENT_PADDED_KEYLEN];
 
-        // 0xAA..AA8000..00; 
-        // 16 x AA, 1 x 80, 15 x 0; 
+        // 32 x 0xAA; 
         // len = SERPENT_PADDED_KEYLEN
         let expected_bytes: Vec<u8> = iter::repeat(0xAAu8)
                                         .take(SERPENT_PADDED_KEYLEN)
                                         .collect();
                                         
 
-        let res_words = generate_start_prekey_from_input_key(input_key);
+        let res_words = generate_start_key_from_input_key(input_key);
         let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
 
         assert!(
@@ -178,15 +171,14 @@ mod tests {
 
         let input_key = array![0xAA; SERPENT_PADDED_KEYLEN + 1];
 
-        // 0xAA..AA8000..00; 
-        // 16 x AA, 1 x 80, 15 x 0; 
+        // 32 x 0xAA 
         // len = SERPENT_PADDED_KEYLEN
         let expected_bytes: Vec<u8> = iter::repeat(0xAAu8)
                                         .take(SERPENT_PADDED_KEYLEN)
                                         .collect();
                                         
 
-        let res_words = generate_start_prekey_from_input_key(input_key);
+        let res_words = generate_start_key_from_input_key(input_key);
         let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
 
         assert!(
@@ -344,6 +336,49 @@ mod tests {
         // assert_eq!(res_bytes, expected_bytes);
         println!("########\nRES\n#######{:02X?}", res_bytes);
         println!("########\nEXP\n#######{:02X?}", expected_bytes);
+
+    }
+
+    #[test]
+    fn test_key_schedule2() {
+
+        // let input_key = array![
+        //     0x00, 0x00, 0x00, 0x00, 
+        //     0x00, 0x00, 0x00, 0x00, 
+        //     0x00, 0x00, 0x00, 0x00, 
+        //     0x00, 0x00, 0x00, 0x01,
+        //     0x00, 0x11, 0x22, 0x33, 
+        //     0x44, 0x55, 0x66, 0x77, 
+        //     0x88, 0x99, 0xaa, 0xbb, 
+        //     0xcc, 0xdd, 0xee, 0xff
+        // ];
+
+        let input_key = array![
+            0xFF,0xEE,0xDD,0xCC,
+            0xBB,0xAA,0x99,0x88,
+            0x77,0x66,0x55,0x44,
+            0x33,0x22,0x11,0x00,
+            0x80,0x00,0x00,0x00,
+            0x00,0x00,0x00,0x00,
+            0x00,0x00,0x00,0x00,
+            0x00,0x00,0x00,0x00
+        ];
+
+        // for by in input_key.iter().rev() {
+        //     print!("0x{:02X},", by);
+        // }
+
+        let expected_key_hex = expected_key_0!();
+
+        let expected_bytes = decode_hex_string(expected_key_hex);
+        
+        let res_words = key_schedule(input_key);
+        let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
+
+        // assert_eq!(res_bytes, expected_bytes);
+        println!("########\nRES\n#######");
+        println!("{:02X?}", res_bytes);
+        // println!("########\nEXP\n#######{:02X?}", expected_bytes);
 
     }
 
