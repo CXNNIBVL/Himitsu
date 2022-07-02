@@ -5,51 +5,62 @@ pub type Serpent128 = Serpent<SERPENT_128_KEYLEN>;
 pub type Serpent192 = Serpent<SERPENT_192_KEYLEN>;
 pub type Serpent256 = Serpent<SERPENT_256_KEYLEN>;
 
+type ExpandedKey = Array<u32, W_SERPENT_EXPANDED_KEYLEN>;
+
 pub struct Serpent<const INPUT_KEY_LEN: usize> {
-    key: Array<u32, SERPENT_EXPANDED_KEYLEN>
+    key: ExpandedKey
 }
 
 impl<const IK: usize> Serpent<IK> {
     pub fn new(key: [u8; IK]) -> Self {
+
+        let expanded_key = apply_key_schedule(
+            expandable_key_from_input_key(
+                array!(key)
+            )
+        );
+
         Self {
-            key: key_schedule( array!(key) )
+            key: expanded_key
         }
     }
 
 
 }
 
-fn generate_start_key_from_input_key<const IK: usize>(input_key: Array<u8, IK>) -> Array<u32, SERPENT_EXPANDED_KEYLEN> {
+fn expandable_key_from_input_key<const IK: usize>(input_key: Array<u8, IK>) -> ExpandedKey {
+    use std::iter::{repeat, once, zip};
 
-    let mut start_key = array![0; SERPENT_EXPANDED_KEYLEN];
+    // Apply Padding [00..01]KEY_MATERIAL .
+    // Reverse sequence and take up to
+    // the padded keylength
+    let padded_iter = repeat(0)
+    .chain(once(1))
+    .chain(input_key.into_iter())
+    .rev()
+    .take(SERPENT_PADDED_KEYLEN);
 
-    // Iterate over bytes, apply serpent padding (0x80) if necessary,
-    // take only up to the padded length
-    let iter = input_key.into_iter()
-                                    .chain([0x80].into_iter())
-                                    .take(SERPENT_PADDED_KEYLEN);
+    let bytes_w_shifts = zip(
+        padded_iter,
+        [0,8,16,24].into_iter().cycle()
+    );
 
-    serialize_bytes_iter_into_u32_slice(start_key.as_mut(), iter);
+    let mut start_key = array![0; W_SERPENT_EXPANDED_KEYLEN];
+
+    // Deserialize into u32 array
+    for (ix, (byte, shift)) in bytes_w_shifts.enumerate() {
+        start_key[ix / 4] |= (byte as u32) << shift;
+    }
 
     start_key
 }
 
-fn serialize_bytes_iter_into_u32_slice<'a, I>(into: &mut [u32], iter: I) 
-    where I: Iterator<Item = u8>
-{
-    for (i, byte) in iter.enumerate() {
-        into[i / 4] |= (byte as u32) << (24 - (i % 4) * 8 );
-    }
-}
- 
-fn key_schedule<const IK: usize>(input_key: Array<u8, IK>) -> Array<u32, SERPENT_EXPANDED_KEYLEN> {
-
-    let mut keys = generate_start_key_from_input_key(input_key);
+fn apply_key_schedule(mut key: ExpandedKey) -> ExpandedKey {
 
     // Compute pre-keys
-    for ix in 8..SERPENT_EXPANDED_KEYLEN {
-        let word = keys[ix - 8] ^ keys[ix - 5] ^ keys[ix - 3] ^ keys[ix - 1] ^ FRAC ^ (ix as u32 - 8);
-        keys[ix] = word.rotate_left(11);
+    for ix in BEGIN_KEYSPACE..END_KEYSPACE {
+        let word = key[ix - 8] ^ key[ix - 5] ^ key[ix - 3] ^ key[ix - 1] ^ FRAC ^ (ix as u32 - 8);
+        key[ix] = word.rotate_left(11);
     }
 
     // Iterator starting at 3, counting downwards, cycling continuously.
@@ -57,21 +68,44 @@ fn key_schedule<const IK: usize>(input_key: Array<u8, IK>) -> Array<u32, SERPENT
     let sbox_iter = (0..=7).rev()
     .cycle()
     .skip(4)
-    .map(|sbox|{ S_BOXES[sbox] });
+    .map(|bx|{ sbox(bx) });
 
-    let block_w_sbox = keys.chunks_mut(4).zip(sbox_iter);
+    let key_space = &mut key[BEGIN_KEYSPACE..END_KEYSPACE];
+    let block_w_sbox = key_space.chunks_mut(4).zip(sbox_iter);
 
-    // Apply SBox
     for (block, sbox) in block_w_sbox {
+        
+        // Apply SBox
         sbox(block);
+        
+        // Swap in place to form 128bit LE roundkey
+        block.swap(0, 3);
+        block.swap(1, 2);
     }
 
-    keys
+    key
+
+}
+
+fn initial_permutation(block: &mut [u32]) {
+
+
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn t() {
+
+        for i in 2..128 {
+            let r = (i * 32) % 127;
+            println!("{}", r);
+        }
+
+    }
 
     fn decode_hex_string(hex: &str) -> Vec<u8> {
         use crate::encode::hex::HexDecoder;
@@ -98,288 +132,149 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_start_subkey_input0() {
-        use std::iter;
+    fn test_expandable_key_input16() {
 
-        let input_key = array![0u8;0];
+        let input_key = array![0xaa; 16];
 
-        // 0x8000..00, len = SERPENT_PADDED_KEYLEN
-        let expected_bytes: Vec<u8> = iter::repeat(0x80u8)
-                                .take(1)
-                                .chain(iter::repeat(0))
-                                .take(SERPENT_PADDED_KEYLEN).collect();
+        let expected = [
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0x00000001,
+            0x00000000,
+            0x00000000,
+            0x00000000
+        ];
 
-        let res_words = generate_start_key_from_input_key(input_key);
-        let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
-
+        let res_words = expandable_key_from_input_key(input_key);
+        
         assert!(
-            res_bytes.into_iter().take(SERPENT_PADDED_KEYLEN)
-            .eq(expected_bytes.into_iter())
-        );
+            res_words.into_iter().take(8)
+            .eq(expected.into_iter())
+        )
     }
 
     #[test]
-    fn test_generate_start_subkey_input16() {
-        use std::iter;
+    fn test_expandable_key_input24() {
 
-        let input_key = array![0xAA; 16];
+        let input_key = array![0xaa; 24];
 
-        // 0xAA..AA8000..00; 
-        // 16 x AA, 1 x 80, 15 x 0; 
-        // len = SERPENT_PADDED_KEYLEN
-        let expected_bytes: Vec<u8> = iter::repeat(0xAAu8).take(16)
-                                        .chain(iter::repeat(0x80u8).take(1))
-                                        .chain(iter::repeat(0u8))
-                                        .take(SERPENT_PADDED_KEYLEN)
-                                        .collect();
-                                        
+        let expected = [
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0x00000001,
+            0x00000000
+        ];
 
-        let res_words = generate_start_key_from_input_key(input_key);
-        let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
-
+        let res_words = expandable_key_from_input_key(input_key);
+        
         assert!(
-            res_bytes.into_iter().take(SERPENT_PADDED_KEYLEN)
-            .eq(expected_bytes.into_iter())
-        );
+            res_words.into_iter().take(8)
+            .eq(expected.into_iter())
+        )
+
     }
 
     #[test]
-    fn test_generate_start_subkey_input_full() {
-        use std::iter;
+    fn test_expandable_key_input32() {
 
-        let input_key = array![0xAA; SERPENT_PADDED_KEYLEN];
+        let input_key = array![0xaa; 32];
 
-        // 32 x 0xAA; 
-        // len = SERPENT_PADDED_KEYLEN
-        let expected_bytes: Vec<u8> = iter::repeat(0xAAu8)
-                                        .take(SERPENT_PADDED_KEYLEN)
-                                        .collect();
-                                        
+        let expected = [
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa,
+            0xaaaaaaaa
+        ];
 
-        let res_words = generate_start_key_from_input_key(input_key);
-        let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
-
+        let res_words = expandable_key_from_input_key(input_key);
+        
         assert!(
-            res_bytes.into_iter().take(SERPENT_PADDED_KEYLEN)
-            .eq(expected_bytes.into_iter())
-        );
+            res_words.into_iter().take(8)
+            .eq(expected.into_iter())
+        )
+
     }
 
-    #[test]
-    fn test_generate_start_subkey_input_bigger_than_full() {
-        use std::iter;
-
-        let input_key = array![0xAA; SERPENT_PADDED_KEYLEN + 1];
-
-        // 32 x 0xAA 
-        // len = SERPENT_PADDED_KEYLEN
-        let expected_bytes: Vec<u8> = iter::repeat(0xAAu8)
-                                        .take(SERPENT_PADDED_KEYLEN)
-                                        .collect();
-                                        
-
-        let res_words = generate_start_key_from_input_key(input_key);
-        let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
-
-        assert!(
-            res_bytes.into_iter().take(SERPENT_PADDED_KEYLEN)
-            .eq(expected_bytes.into_iter())
-        );
-    }
-
-    macro_rules! expected_key_0 {
-        () => {
-            "
-            80000000000000000000000000000000
-            40000000000000000000000000000000
-            20000000000000000000000000000000
-            10000000000000000000000000000000
-            08000000000000000000000000000000
-            04000000000000000000000000000000
-            02000000000000000000000000000000
-            01000000000000000000000000000000
-            00800000000000000000000000000000
-            00400000000000000000000000000000
-            00200000000000000000000000000000
-            00100000000000000000000000000000
-            00080000000000000000000000000000
-            00040000000000000000000000000000
-            00020000000000000000000000000000
-            00010000000000000000000000000000
-            00008000000000000000000000000000
-            00004000000000000000000000000000
-            00002000000000000000000000000000
-            00001000000000000000000000000000
-            00000800000000000000000000000000
-            00000400000000000000000000000000
-            00000200000000000000000000000000
-            00000100000000000000000000000000
-            00000080000000000000000000000000
-            00000040000000000000000000000000
-            00000020000000000000000000000000
-            00000010000000000000000000000000
-            00000008000000000000000000000000
-            00000004000000000000000000000000
-            00000002000000000000000000000000
-            00000001000000000000000000000000
-            00000000800000000000000000000000
-            00000000400000000000000000000000
-            00000000200000000000000000000000
-            00000000100000000000000000000000
-            00000000080000000000000000000000
-            00000000040000000000000000000000
-            00000000020000000000000000000000
-            00000000010000000000000000000000
-            00000000008000000000000000000000
-            00000000004000000000000000000000
-            00000000002000000000000000000000
-            00000000001000000000000000000000
-            00000000000800000000000000000000
-            00000000000400000000000000000000
-            00000000000200000000000000000000
-            00000000000100000000000000000000
-            00000000000080000000000000000000
-            00000000000040000000000000000000
-            00000000000020000000000000000000
-            00000000000010000000000000000000
-            00000000000008000000000000000000
-            00000000000004000000000000000000
-            00000000000002000000000000000000
-            00000000000001000000000000000000
-            00000000000000800000000000000000
-            00000000000000400000000000000000
-            00000000000000200000000000000000
-            00000000000000100000000000000000
-            00000000000000080000000000000000
-            00000000000000040000000000000000
-            00000000000000020000000000000000
-            00000000000000010000000000000000
-            00000000000000008000000000000000
-            00000000000000004000000000000000
-            00000000000000002000000000000000
-            00000000000000001000000000000000
-            00000000000000000800000000000000
-            00000000000000000400000000000000
-            00000000000000000200000000000000
-            00000000000000000100000000000000
-            00000000000000000080000000000000
-            00000000000000000040000000000000
-            00000000000000000020000000000000
-            00000000000000000010000000000000
-            00000000000000000008000000000000
-            00000000000000000004000000000000
-            00000000000000000002000000000000
-            00000000000000000001000000000000
-            00000000000000000000800000000000
-            00000000000000000000400000000000
-            00000000000000000000200000000000
-            00000000000000000000100000000000
-            00000000000000000000080000000000
-            00000000000000000000040000000000
-            00000000000000000000020000000000
-            00000000000000000000010000000000
-            00000000000000000000008000000000
-            00000000000000000000004000000000
-            00000000000000000000002000000000
-            00000000000000000000001000000000
-            00000000000000000000000800000000
-            00000000000000000000000400000000
-            00000000000000000000000200000000
-            00000000000000000000000100000000
-            00000000000000000000000080000000
-            00000000000000000000000040000000
-            00000000000000000000000020000000
-            00000000000000000000000010000000
-            00000000000000000000000008000000
-            00000000000000000000000004000000
-            00000000000000000000000002000000
-            00000000000000000000000001000000
-            00000000000000000000000000800000
-            00000000000000000000000000400000
-            00000000000000000000000000200000
-            00000000000000000000000000100000
-            00000000000000000000000000080000
-            00000000000000000000000000040000
-            00000000000000000000000000020000
-            00000000000000000000000000010000
-            00000000000000000000000000008000
-            00000000000000000000000000004000
-            00000000000000000000000000002000
-            00000000000000000000000000001000
-            00000000000000000000000000000800
-            00000000000000000000000000000400
-            00000000000000000000000000000200
-            00000000000000000000000000000100
-            00000000000000000000000000000080
-            00000000000000000000000000000040
-            00000000000000000000000000000020
-            00000000000000000000000000000010
-            00000000000000000000000000000008
-            00000000000000000000000000000004
-            00000000000000000000000000000002
-            00000000000000000000000000000001"
-        };
-    }
-    
     #[test]
     fn test_key_schedule() {
 
-        let input_key = array![0u8; 0];
-
-        let expected_key_hex = expected_key_0!();
-
-        let expected_bytes = decode_hex_string(expected_key_hex);
-        
-        let res_words = key_schedule(input_key);
-        let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
-
-        // assert_eq!(res_bytes, expected_bytes);
-        println!("########\nRES\n#######{:02X?}", res_bytes);
-        println!("########\nEXP\n#######{:02X?}", expected_bytes);
-
-    }
-
-    #[test]
-    fn test_key_schedule2() {
-
-        // let input_key = array![
-        //     0x00, 0x00, 0x00, 0x00, 
-        //     0x00, 0x00, 0x00, 0x00, 
-        //     0x00, 0x00, 0x00, 0x00, 
-        //     0x00, 0x00, 0x00, 0x01,
-        //     0x00, 0x11, 0x22, 0x33, 
-        //     0x44, 0x55, 0x66, 0x77, 
-        //     0x88, 0x99, 0xaa, 0xbb, 
-        //     0xcc, 0xdd, 0xee, 0xff
-        // ];
-
         let input_key = array![
-            0xFF,0xEE,0xDD,0xCC,
-            0xBB,0xAA,0x99,0x88,
-            0x77,0x66,0x55,0x44,
-            0x33,0x22,0x11,0x00,
-            0x80,0x00,0x00,0x00,
-            0x00,0x00,0x00,0x00,
-            0x00,0x00,0x00,0x00,
-            0x00,0x00,0x00,0x00
+            0x00,
+            0x01,
+            0x02,
+            0x03,
+            0x04,
+            0x05,
+            0x06,
+            0x07,
+            0x08,
+            0x09,
+            0xaa,
+            0xbb,
+            0xcc,
+            0xdd,
+            0xee,
+            0xff
         ];
 
-        // for by in input_key.iter().rev() {
-        //     print!("0x{:02X},", by);
-        // }
+        macro_rules! expected_hex {
+            () => {
+                "41e1e73bb2a748c837ea85e4dd6e8487
+                0e3541ed888a7bd0850cdece6778fa19
+                7899f56ec717e6f2f673a40031a922bc
+                944da91f532fb8c0782b4abac5adda7f
+                3df19f257eb22f58e9f7abcf83f6f334
+                fd7b224be2dd5bb3fdf8dfb95e59b7dd
+                adef3f999cd1c64637ca7ffc5da88d7a
+                8604c19060bde15ab8a39b117e6528f5
+                0a071549f00ddf4a4846794e4bc381ce
+                8b94abb33674ec53cceaa0330f024302
+                74c012955ea309db42c0280447e067e0
+                62c14e306a31498ee93eb992ad84cb7b
+                c5e668099b0745dec9217167e03eb45f
+                7fbc7710169b12787333ee79baa5e0e0
+                f388a3c7c7c3c874ae8ced2728a6dd51
+                47ac46700af4f01c2d922e5d058acf6a
+                ee8e99c59760af7ac4488e2ec6523911
+                16f6785066df5f571ef05de6ea38f5d6
+                eebdc74ce1b71ed0bd5c6355731a0df6
+                81bfeee03122e674dc0a3a5f67f5833a
+                0765a42bc2102db50a8e4dd273b0c29b
+                f1a8b3f0778ed401d2495d437f953c35
+                34382bc44e53ce391e0e45a477313996
+                30672ce6f10c668b67a8db44b182762e
+                8d013694b5fe369a45de0d179f3a3ecf
+                5a4aba9940c939edc373445515382677
+                d4914fbff4e972521cab19ba3cf7d56d
+                e74ba1f7ef2bc58e436b3d8f707db88a
+                b9dd1a7c89dc175ab99813ea4d254430
+                c279d19fcf5b78a918c2294173e4d2f2
+                6aedd443659ee5c6a0f6b78413739bf9
+                0e6b2b9fd64c9489d0819ffa2bd0c648
+                73ca9671b185a3a09a9aace47a77ea3a
+                "
+            };
+        }
 
-        let expected_key_hex = expected_key_0!();
+        let expected = decode_hex_string(expected_hex!());
 
-        let expected_bytes = decode_hex_string(expected_key_hex);
-        
-        let res_words = key_schedule(input_key);
-        let res_bytes = deserialize_u32_into_u8(res_words.as_ref());
+        let res = apply_key_schedule(
+            expandable_key_from_input_key(input_key)
+        );
 
-        // assert_eq!(res_bytes, expected_bytes);
-        println!("########\nRES\n#######");
-        println!("{:02X?}", res_bytes);
-        // println!("########\nEXP\n#######{:02X?}", expected_bytes);
+        let res_bytes = deserialize_u32_into_u8(&res[BEGIN_KEYSPACE..END_KEYSPACE]);
 
+        assert_eq!(res_bytes, expected);
     }
 
 }
