@@ -87,25 +87,9 @@ fn apply_key_schedule(mut key: ExpandedKey) -> ExpandedKey {
 
 }
 
-fn initial_permutation(block: &mut [u32]) {
-
-
-
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn t() {
-
-        for i in 2..128 {
-            let r = (i * 32) % 127;
-            println!("{}", r);
-        }
-
-    }
 
     fn decode_hex_string(hex: &str) -> Vec<u8> {
         use crate::encode::hex::HexDecoder;
