@@ -1,5 +1,6 @@
 use super::constants::*;
-use crate::{util::secure::Array, array, mem};
+use crate::{util::secure::Array, array};
+use crate::traits::cipher::block::{BlockCipherEncryption, BlockCipherDecryption};
 
 pub type Serpent128 = Serpent<SERPENT_128_KEYLEN>;
 pub type Serpent192 = Serpent<SERPENT_192_KEYLEN>;
@@ -13,22 +14,15 @@ pub struct Serpent<const INPUT_KEY_LEN: usize> {
 
 impl<const IK: usize> Serpent<IK> {
     pub fn new(key: [u8; IK]) -> Self {
-
-        let expanded_key = apply_key_schedule(
-            expandable_key_from_input_key(
-                array!(key)
-            )
-        );
-
         Self {
-            key: expanded_key
+            key: expanded_key(array!(key))
         }
     }
 
 
 }
 
-fn expandable_key_from_input_key<const IK: usize>(input_key: Array<u8, IK>) -> ExpandedKey {
+fn expanded_key<const IK: usize>(input_key: Array<u8, IK>) -> ExpandedKey {
     use std::iter::{repeat, once, zip};
 
     // Apply Padding [00..01]KEY_MATERIAL .
@@ -37,8 +31,7 @@ fn expandable_key_from_input_key<const IK: usize>(input_key: Array<u8, IK>) -> E
     let padded_iter = repeat(0)
     .chain(once(1))
     .chain(input_key.into_iter())
-    .rev()
-    .take(SERPENT_PADDED_KEYLEN);
+    .rev().take(SERPENT_PADDED_KEYLEN);
 
     let bytes_w_shifts = zip(
         padded_iter,
@@ -52,7 +45,7 @@ fn expandable_key_from_input_key<const IK: usize>(input_key: Array<u8, IK>) -> E
         start_key[ix / 4] |= (byte as u32) << shift;
     }
 
-    start_key
+    apply_key_schedule(start_key)
 }
 
 fn apply_key_schedule(mut key: ExpandedKey) -> ExpandedKey {
@@ -75,15 +68,110 @@ fn apply_key_schedule(mut key: ExpandedKey) -> ExpandedKey {
 
     for (block, sbox) in block_w_sbox {
         
-        // Apply SBox
-        sbox(block);
-        
-        // Swap in place to form 128bit LE roundkey
-        block.swap(0, 3);
-        block.swap(1, 2);
+        // Apply SBox and place in LE 128bit round key
+        (block[3], block[2], block[1], block[0]) = sbox(block[0], block[1], block[2], block[3]);
     }
 
     key
+
+}
+
+fn linear_transformation(mut x0: u32, mut x1: u32, mut x2: u32, mut x3: u32) -> (u32, u32, u32, u32) {
+
+    x0 = x0.rotate_left(13);
+    x2 = x2.rotate_left(3);
+    x1 ^= x0 ^ x2;
+    x3 ^= x2 ^ (x0 << 3);
+    x1 = x1.rotate_left(1);
+    x3 = x3.rotate_left(7);
+    x0 ^= x1 ^ x3;
+    x2 ^= x3 ^ (x1 << 7);
+    x0 = x0.rotate_left(5);
+    x2 = x2.rotate_left(22);
+
+    (x0, x1, x2, x3)
+}
+
+fn inv_linear_transformation(x: &mut [u32]) {
+    x[2] = x[2].rotate_right(22);    
+    x[0] = x[0].rotate_right(5);     
+    x[2] ^= x[3] ^ (x[1] << 7);  
+    x[0] ^= x[1] ^ x[3];         
+    x[1] = x[1].rotate_right(1);     
+    x[3] = x[3].rotate_right(7) ^ x[2] ^ (x[0] << 3);  
+    x[1] ^= x[0] ^ x[2];         
+    x[2] = x[2].rotate_right(3);     
+    x[0] = x[0].rotate_right(13);
+}
+
+fn mix_key(x: &mut [u32], k: &[u32]) {
+    crate::mem::xor_buffers(x, k);
+}
+
+fn roundkey(round: usize, keys: &[u32]) -> &[u32] {
+    let keyspace = &keys[BEGIN_KEYSPACE..END_KEYSPACE];
+    
+    let roundkey_begin = round * 4;
+    let roundkey_end = roundkey_begin + 4;
+
+    &keyspace[roundkey_begin..roundkey_end]
+}
+
+fn data_to_block(data: &[u8]) -> Array<u32, 4> {
+    
+    let mut block = array![0; 4];
+
+    for (i, by) in data.iter().rev().enumerate() {
+        block[i / 4] |= (*by as u32) << (24 - (i % 4) * 8);
+    }
+
+    block
+}
+
+fn block_to_data(block: &[u32], data: &mut [u8]) {
+
+    let it = data.chunks_mut(4).zip(block.iter());
+
+    for (chunk, word) in it {
+
+        chunk[3] = (*word & 0x000000FF) as u8;
+        chunk[2] = ((*word & 0x0000FF00) >> 8) as u8;
+        chunk[1] = ((*word & 0x00FF0000) >> 16) as u8;
+        chunk[0] = ((*word & 0xFF000000) >> 24) as u8;
+    }
+
+}
+
+fn log_block(label: String, block: &[u32]) {
+    let f = format!("{}{:08x?}",label, block.as_ref());
+    dbg!(f);
+}
+
+impl<const IK: usize> BlockCipherEncryption<BLOCKSIZE> for Serpent<IK> {
+
+    fn encrypt(&mut self, data: &mut [u8; BLOCKSIZE]) {
+
+        let mut block = data_to_block(data);
+        
+        for round in 0..ROUNDS {
+            
+            mix_key(block.as_mut(), roundkey(round, self.key.as_ref()));
+            
+            (block[0], block[1], block[2], block[3]) = sbox(round)(block[3], block[2], block[1], block[0]);
+
+            (block[3], block[2], block[1], block[0]) = linear_transformation(block[0], block[1], block[2], block[3]);
+        }
+
+        const LAST_ROUND: usize = ROUNDS;
+
+        mix_key(block.as_mut(), roundkey(LAST_ROUND, self.key.as_ref()));
+        
+        (block[3], block[2], block[1], block[0]) = sbox(LAST_ROUND)(block[3], block[2], block[1], block[0]);
+
+        mix_key(block.as_mut(), roundkey(LAST_ROUND + 1, self.key.as_ref()));
+
+        block_to_data(block.as_ref(), data);
+    }
 
 }
 
@@ -116,6 +204,38 @@ mod tests {
     }
 
     #[test]
+    fn test_serpent() {
+
+        // let input_key = [
+        //     0x00,
+        //     0x01,
+        //     0x02,
+        //     0x03,
+        //     0x04,
+        //     0x05,
+        //     0x06,
+        //     0x07,
+        //     0x08,
+        //     0x09,
+        //     0xaa,
+        //     0xbb,
+        //     0xcc,
+        //     0xdd,
+        //     0xee,
+        //     0xff
+        // ];
+
+        let mut input_key = [0; 32]; input_key[31] = 0x80;
+
+        let mut serpent = Serpent256::new(input_key);
+
+        let mut data = [0; 16];
+        serpent.encrypt(&mut data);
+
+        println!("{:02x?}", data);
+    }
+
+    #[test]
     fn test_expandable_key_input16() {
 
         let input_key = array![0xaa; 16];
@@ -131,7 +251,7 @@ mod tests {
             0x00000000
         ];
 
-        let res_words = expandable_key_from_input_key(input_key);
+        let res_words = expanded_key(input_key);
         
         assert!(
             res_words.into_iter().take(8)
@@ -155,7 +275,7 @@ mod tests {
             0x00000000
         ];
 
-        let res_words = expandable_key_from_input_key(input_key);
+        let res_words = expanded_key(input_key);
         
         assert!(
             res_words.into_iter().take(8)
@@ -180,7 +300,7 @@ mod tests {
             0xaaaaaaaa
         ];
 
-        let res_words = expandable_key_from_input_key(input_key);
+        let res_words = expanded_key(input_key);
         
         assert!(
             res_words.into_iter().take(8)
@@ -253,7 +373,7 @@ mod tests {
         let expected = decode_hex_string(expected_hex!());
 
         let res = apply_key_schedule(
-            expandable_key_from_input_key(input_key)
+            expanded_key(input_key)
         );
 
         let res_bytes = deserialize_u32_into_u8(&res[BEGIN_KEYSPACE..END_KEYSPACE]);
