@@ -3,13 +3,13 @@ mod common;
 #[cfg(test)]
 mod tests {
 
-    use super::common::{decode, decode_into_array};
-    use himitsu::cipher::block::{
-        buffered::{BufferedCipherDecryptionInjector, BufferedCipherEncryptionInjector},
-        cbc::{CbcDecryptionInjector, CbcEncryptionInjector},
-        primitive::aes,
+    use super::common::{decode, decode_into_array, decode_into_blocks};
+    use himitsu::blockcipher::{
+        BlockCipherEncryption,
+        BlockCipherDecryption,
+        cbc::{CbcDecryptionProvider, CbcEncryptionProvider},
+        aes,
     };
-    use std::io::Write;
 
     macro_rules! cbc_test_enc {
         (
@@ -23,15 +23,18 @@ mod tests {
         ) => {
             #[test]
             fn $fn_name() {
-                let input = decode($input);
+                let mut input = decode_into_blocks($input);
                 let key = decode_into_array::<$keylen>($key);
                 let iv = decode_into_array($iv);
                 let expected = decode($expected);
 
-                let mut cipher = <$cipher>::new(key).with_cbc_encryption(iv).buffered();
-                cipher.write_all(&input).unwrap();
+                let mut cipher = <$cipher>::new(key).with_cbc_encryption(iv);
+                
+                for block in input.iter_mut() {
+                    cipher.encrypt(block);
+                }
 
-                let output: Vec<u8> = cipher.finalize().collect();
+                let output: Vec<u8> = input.into_iter().flatten().collect();
 
                 assert_eq!(expected, output);
             }
@@ -50,15 +53,18 @@ mod tests {
         ) => {
             #[test]
             fn $fn_name() {
-                let input = decode($input);
+                let mut input = decode_into_blocks($input);
                 let key = decode_into_array::<$keylen>($key);
                 let iv = decode_into_array($iv);
                 let expected = decode($expected);
 
-                let mut cipher = <$cipher>::new(key).with_cbc_decryption(iv).buffered();
-                cipher.write_all(&input).unwrap();
+                let mut cipher = <$cipher>::new(key).with_cbc_decryption(iv);
+                
+                for block in input.iter_mut() {
+                    cipher.decrypt(block);
+                }
 
-                let output: Vec<u8> = cipher.finalize().collect();
+                let output: Vec<u8> = input.into_iter().flatten().collect();
 
                 assert_eq!(expected, output);
             }

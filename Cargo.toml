@@ -3,6 +3,9 @@ name = "himitsu"
 version = "0.1.0"
 edition = "2021"
 
+[dev-dependencies]
+criterion = "0.3.6"
+
 [dependencies]
 thiserror = "1.0.30"
 crossbeam = "0.8.1"

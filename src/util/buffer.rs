@@ -1,129 +1,56 @@
-use crate::traits::util::buffer::Buffer;
-pub use conversion::*;
-use std::mem;
-use std::ops::{Deref, DerefMut};
+use std::convert::{AsRef, AsMut};
 
-#[derive(Clone, Copy, Debug)]
-pub struct ArrayBuffer<T, const S: usize>
-where
-    T: Clone + Copy + Default,
-{
-    buf: [T; S],
-    capacity: usize,
+pub struct Buffer<'a, T> {
+    buffer: &'a mut [T],
+    capacity: usize
 }
 
-impl<T, const S: usize> Buffer<T> for ArrayBuffer<T, S>
-where
-    T: Clone + Copy + Default,
-{
-    fn buffer(&self) -> &[T] {
-        &self.buf
+impl<'a, T> Buffer<'a, T> {
+
+    /// Create a new buffer
+    pub fn new(buffer: &'a mut [T]) -> Self {
+        Self { capacity: buffer.len(), buffer }
     }
 
-    fn buffer_mut(&mut self) -> &mut [T] {
-        &mut self.buf
-    }
-
-    fn capacity(&self) -> usize {
+    /// Get the capacity of the buffer
+    pub fn capacity(&self) -> usize {
         self.capacity
     }
 
-    fn push(&mut self, element: T) -> bool {
-        if self.capacity == 0 {
-            return false;
+    /// Get the underlying buffers length
+    pub fn len(&self) -> usize {
+        self.buffer.len()
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.capacity() == 0
+    }
+
+    pub fn is_empty(&self) -> bool {
+        !self.is_full()
+    }
+
+    /// Tries to push an element into the buffer.
+    /// If the buffer runs out of space, it will return
+    /// the element as the content of the Some state.
+    /// Else, an None will be returned.
+    pub fn push(&mut self, element: T) -> Option<T> {
+        if self.capacity() == 0 {
+            return Some(element)
         }
 
-        let position = self.len() - self.capacity;
-        self.buf[position] = element;
+        let pos = self.len() - self.capacity();
+        self.buffer[pos] = element;
         self.capacity -= 1;
-        true
+
+        None
     }
 }
 
-impl<T, const S: usize> ArrayBuffer<T, S>
-where
-    T: Clone + Copy + Default,
-{
-    /// Create a new buffer
-    pub fn new() -> Self {
-        Self {
-            buf: [T::default(); S],
-            capacity: S,
-        }
-    }
-
-    /// Extract the buffers contents and resets the buffer
-    pub fn extract(&mut self) -> [T; S] {
-        self.capacity = S;
-        mem::replace(&mut self.buf, [T::default(); S])
-    }
-
-    /// Extract the buffers contents and resets the buffer in place, not resetting the capacity
-    pub fn extract_in_place(&mut self, buf: [T; S]) -> [T; S] {
-        self.capacity = 0;
-        mem::replace(&mut self.buf, buf)
-    }
+impl<'a, T> AsRef<[T]> for Buffer<'a, T> {
+    fn as_ref(&self) -> &[T] { self.buffer }
 }
 
-impl<T, const S: usize> Default for ArrayBuffer<T, S>
-where
-    T: Clone + Copy + Default,
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T, const S: usize> Deref for ArrayBuffer<T, S>
-where
-    T: Clone + Copy + Default,
-{
-    type Target = [T; S];
-    fn deref(&self) -> &Self::Target {
-        &self.buf
-    }
-}
-
-impl<T, const S: usize> DerefMut for ArrayBuffer<T, S>
-where
-    T: Clone + Copy + Default,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.buf
-    }
-}
-
-mod conversion {
-    use super::*;
-
-    impl<T: Clone + Copy + Default, const B: usize> From<[T; B]> for ArrayBuffer<T, B> {
-        /// Create a new filled buffer from an array of same type and length
-        fn from(buf: [T; B]) -> Self {
-            Self { buf, capacity: 0 }
-        }
-    }
-
-    impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a [T; B]> for ArrayBuffer<T, B> {
-        fn from(buf: &'a [T; B]) -> Self {
-            Self {
-                buf: *buf,
-                capacity: 0,
-            }
-        }
-    }
-
-    impl<'a, T: Clone + Copy + Default, const B: usize> From<&'a mut [T; B]> for ArrayBuffer<T, B> {
-        fn from(buf: &'a mut [T; B]) -> Self {
-            Self {
-                buf: *buf,
-                capacity: 0,
-            }
-        }
-    }
-
-    impl<T: Clone + Copy + Default, const B: usize> From<ArrayBuffer<T, B>> for [T; B] {
-        fn from(buf: ArrayBuffer<T, B>) -> [T; B] {
-            buf.buf
-        }
-    }
+impl<'a, T> AsMut<[T]> for Buffer<'a, T> {
+    fn as_mut(&mut self) -> &mut [T] { self.buffer }
 }

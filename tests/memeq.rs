@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use himitsu::mem::memeq_s;
+    use himitsu::util::memeq_s;
 
     // Compare two equal buffers
     #[test]

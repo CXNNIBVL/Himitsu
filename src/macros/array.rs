@@ -6,7 +6,7 @@ macro_rules! array {
     ($type: ty, $length: literal) => {
 
         { 
-            use crate::util::secure::Array;
+            use $crate::util::Array;
             Array::<$type, $length>::default() 
         }
     };
@@ -15,7 +15,7 @@ macro_rules! array {
     ($type: ty, $length: ident) => {
 
         { 
-            use crate::util::secure::Array;
+            use $crate::util::Array;
             Array::<$type, $length>::default() 
         }
     };
@@ -24,7 +24,7 @@ macro_rules! array {
     ($type: ty, $length: expr) => {
 
         { 
-            use crate::util::secure::Array;
+            use $crate::util::Array;
             Array::<$type, $length>::default() 
         }
     };
@@ -69,7 +69,7 @@ macro_rules! array {
     // From array identifier
     ($name: ident) => { 
         { 
-            use crate::util::secure::Array;
+            use $crate::util::Array;
             Array::from($name) 
         } 
     };
