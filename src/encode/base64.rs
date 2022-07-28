@@ -1,4 +1,13 @@
-use crate::errors::base64::Base64Error;
+use thiserror::Error as ThisErr;
+
+#[derive(ThisErr, Debug)]
+pub enum Base64Error {
+    #[error("input length must be a multiple of 4 (found {0})")]
+    InvalidInputLength(usize),
+
+    #[error("invalid length after stripping non-base64 characters, remainder must be either 0, 2 or 3 (found {0})")]
+    InvalidFormat(usize),
+}
 
 const B64_CHARS: [char; 64] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',

@@ -4,11 +4,17 @@ mod common;
 mod tests {
 
     use super::common::{decode, decode_into_array};
-    use himitsu::cipher::{
-        block::primitive::aes,
-        stream::cfb::{CfbDecryptionInjector, CfbEncryptionInjector},
+    use himitsu::{
+        blockcipher::aes,
+        streamcipher::{
+            StreamCipherEncryption,
+            StreamCipherDecryption,
+            cfb::{
+                CfbDecryptionProvider, 
+                CfbEncryptionProvider
+            }
+        },
     };
-    use himitsu::prelude::*;
 
     macro_rules! cfb_test_enc {
         (

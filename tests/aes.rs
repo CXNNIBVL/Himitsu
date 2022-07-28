@@ -4,11 +4,10 @@ mod common;
 mod tests {
 
     use super::common::{decode, decode_into_array};
-    use himitsu::{
-        cipher::block::primitive::aes::*,
-        traits::cipher::primitive::{
-            BlockCipherPrimitiveDecryption, BlockCipherPrimitiveEncryption,
-        },
+    use himitsu::blockcipher::{
+        BlockCipherEncryption,
+        BlockCipherDecryption,
+        aes::*
     };
 
     #[test]
@@ -23,7 +22,7 @@ mod tests {
             buf[i] = element;
         }
 
-        let aes = Aes128::new(key);
+        let mut aes = Aes128::new(key);
         aes.encrypt(&mut buf);
 
         assert_eq!(expected, buf.as_ref());
@@ -42,7 +41,7 @@ mod tests {
             buf[i] = element;
         }
 
-        let aes = Aes192::new(key);
+        let mut aes = Aes192::new(key);
         aes.encrypt(&mut buf);
 
         assert_eq!(expected, buf.as_ref());
@@ -62,7 +61,7 @@ mod tests {
             buf[i] = element;
         }
 
-        let aes = Aes256::new(key);
+        let mut aes = Aes256::new(key);
         aes.encrypt(&mut buf);
 
         assert_eq!(expected, buf.as_ref());
@@ -80,7 +79,7 @@ mod tests {
             buf[i] = element;
         }
 
-        let aes = Aes128::new(key);
+        let mut aes = Aes128::new(key);
         aes.decrypt(&mut buf);
 
         assert_eq!(expected, buf.as_ref());

@@ -1,9 +1,6 @@
-pub mod cipher;
+pub mod blockcipher;
+pub mod streamcipher;
 pub mod encode;
-pub mod errors;
 pub mod math;
-pub mod mem;
-pub mod prelude;
-pub mod traits;
 pub mod util;
 pub mod macros;

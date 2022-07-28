@@ -6,7 +6,7 @@ macro_rules! vector {
     ($type: ty) => {
 
         { 
-            use crate::util::secure::Vector;
+            use $crate::util::Vector;
             Vector::<$type>::default() 
         }
     };
@@ -15,7 +15,7 @@ macro_rules! vector {
     ($default_value: literal; $length: literal) => {
 
         {
-            use crate::util::secure::Vector;
+            use $crate::util::Vector;
             let v = vec![$default_value; $length];
             
             Vector::from(v)
@@ -26,7 +26,7 @@ macro_rules! vector {
     ($default_value: literal; $length: ident) => {
 
         {
-            use crate::util::secure::Vector;
+            use $crate::util::Vector;
             let v = vec![$default_value; $length];
             
             Vector::from(v)
@@ -37,7 +37,7 @@ macro_rules! vector {
     // From defined list
     ( $( $x:expr ),* ) => {
         {   
-            use crate::util::secure::Vector;
+            use $crate::util::Vector;
             let vec = vec![ $( $x, )* ];
             let sec = Vector::from(vec);
             sec
