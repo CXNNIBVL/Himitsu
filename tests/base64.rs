@@ -35,7 +35,7 @@ mod tests {
 
         match Base64Encoder::default().decode(&encoded) {
             Ok(v) => assert_eq!(data.as_bytes(), v),
-            Err(_) => assert!(false),
+            Err(_) => unreachable!(),
         };
     }
 
@@ -47,7 +47,7 @@ mod tests {
 
         match Base64Encoder::default().decode(&encoded) {
             Ok(v) => assert_eq!(data.as_bytes(), v),
-            Err(_) => assert!(false),
+            Err(_) => unreachable!(),
         };
     }
 
@@ -59,7 +59,7 @@ mod tests {
 
         match Base64Encoder::default().decode(&encoded) {
             Ok(v) => assert_eq!(data.as_bytes(), v),
-            Err(_) => assert!(false),
+            Err(_) => unreachable!(),
         };
     }
 
@@ -68,10 +68,10 @@ mod tests {
     fn decode_basic_invalid_length() {
         let data = "a";
 
-        match Base64Encoder::default().decode(&data) {
-            Ok(_) => assert!(false),
+        match Base64Encoder::default().decode(data) {
+            Ok(_) => unreachable!(),
             Err(e) => match e {
-                Base64Error::InvalidFormat(_) => assert!(false),
+                Base64Error::InvalidFormat(_) => unreachable!(),
                 Base64Error::InvalidInputLength(s) => assert_eq!(s, 1),
             },
         }
@@ -82,11 +82,11 @@ mod tests {
     fn decode_basic_invalid_fmt() {
         let data = "A=AA==AA";
 
-        match Base64Encoder::default().decode(&data) {
-            Ok(_) => assert!(false),
+        match Base64Encoder::default().decode(data) {
+            Ok(_) => unreachable!(),
             Err(e) => match e {
-                Base64Error::InvalidInputLength(_) => assert!(false),
-                Base64Error::InvalidFormat(_) => assert!(true),
+                Base64Error::InvalidInputLength(_) => unreachable!(),
+                Base64Error::InvalidFormat(_) => {},
             },
         }
     }

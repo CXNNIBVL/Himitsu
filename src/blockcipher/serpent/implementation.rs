@@ -196,7 +196,7 @@ mod tests {
             let b1 = ( (*word & 0xFF000000) >> 24) as u8;
             let b2 = ( (*word & 0x00FF0000) >> 16) as u8;
             let b3 = ( (*word & 0x0000FF00) >> 8) as u8;
-            let b4 = ( (*word & 0x000000FF) >> 0) as u8;
+            let b4 = (*word & 0x000000FF) as u8;
 
             vec.push(b1);
             vec.push(b2);
